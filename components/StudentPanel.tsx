@@ -9,18 +9,26 @@ interface StudentPanelProps {
 }
 
 const CLASSES = ['প্লে', 'নার্সারী', 'প্রথম', 'দ্বিতীয়', 'তৃতীয়', 'চতুর্থ', 'পঞ্চম'];
-const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '২০৩০'];
+const YEARS = ['2025', '2026', '2027', '2028', '2029', '2030'];
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
+
+// Utility to normalize digits (Bengali to English)
+const normalizeDigits = (str: string | number) => {
+  if (!str) return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return str.toString().replace(/[০-৯]/g, (d) => bengaliDigits.indexOf(d).toString());
+};
 
 const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects: classSubjectsMap }) => {
   const [searchType, setSearchType] = useState<'BATCH' | 'INDIVIDUAL'>('INDIVIDUAL');
-  const [batchFilter, setBatchFilter] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
-  const [indivSearch, setIndivSearch] = useState({ roll: '', class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
+  const [batchFilter, setBatchFilter] = useState({ class: 'প্রথম', year: '2026', exam: 'বার্ষিক পরীক্ষা' });
+  const [indivSearch, setIndivSearch] = useState({ roll: '', class: 'প্রথম', year: '2026', exam: 'বার্ষিক পরীক্ষা' });
   const [foundStudent, setFoundStudent] = useState<Student | null>(null);
   const [searched, setSearched] = useState(false);
   
-  // New: Sort order for Rank (Small to Big or Big to Small)
-  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC'); // DESC = Highest marks first (Rank 1)
+  // Sorting state
+  const [batchSortKey, setBatchSortKey] = useState<'RANK' | 'ROLL'>('RANK');
+  const [batchSortOrder, setBatchSortOrder] = useState<'ASC' | 'DESC'>('ASC');
 
   const publishedResults = useMemo(() => results.filter(r => r.isPublished), [results]);
 
@@ -30,48 +38,20 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   }, [indivSearch.roll, indivSearch.class, indivSearch.year, indivSearch.exam, searchType]);
 
   const getSpecificResult = (studentId: string, className: string, year: string, examName: string) => {
-    return publishedResults.find(r => 
-      r.studentId === studentId && 
-      r.class === className && 
-      r.year === year && 
-      r.examName.trim() === examName.trim()
-    );
+    return publishedResults.find(r => r.studentId === studentId && r.class === className && r.year === year && r.examName === examName);
   };
 
-  const getSubjectsForClass = (className: string) => {
-    return classSubjectsMap[className] || [];
-  };
-
-  // Ranking calculation remains Descending by default for Rank numbers
   const classRanking = useMemo(() => {
     const targetClass = searchType === 'BATCH' ? batchFilter.class : indivSearch.class;
     const targetYear = searchType === 'BATCH' ? batchFilter.year : indivSearch.year;
     const targetExam = searchType === 'BATCH' ? batchFilter.exam : indivSearch.exam;
     
     const classStudents = students.filter(s => s.studentClass === targetClass && s.year === targetYear);
-    
     const scores = classStudents.map(student => {
-      if (targetExam === 'বার্ষিক পরীক্ষা') {
-        const r1 = getSpecificResult(student.id, targetClass, targetYear, 'প্রথম সাময়িক');
-        const r2 = getSpecificResult(student.id, targetClass, targetYear, 'দ্বিতীয় সাময়িক');
-        const r3 = getSpecificResult(student.id, targetClass, targetYear, 'বার্ষিক পরীক্ষা');
-        
-        const t1 = r1?.totalMarks || 0;
-        const t2 = r2?.totalMarks || 0;
-        const t3 = r3?.totalMarks || 0;
-        
-        // Annual Average logic
-        return { studentId: student.id, score: (t1 + t2 + t3) / 3, hasResult: !!r3 };
-      } else {
-        const res = getSpecificResult(student.id, targetClass, targetYear, targetExam);
-        return { studentId: student.id, score: res?.totalMarks || 0, hasResult: !!res };
-      }
+      const res = getSpecificResult(student.id, targetClass, targetYear, targetExam);
+      return { studentId: student.id, score: res?.totalMarks || 0, hasResult: !!res };
     });
-    
-    // Always calculate base ranking Descending (Highest score = 1)
-    return scores
-      .filter(s => s.hasResult)
-      .sort((a, b) => b.score - a.score);
+    return scores.filter(s => s.hasResult).sort((a, b) => b.score - a.score);
   }, [students, publishedResults, indivSearch, batchFilter, searchType]);
 
   const getRank = (studentId: string) => {
@@ -80,291 +60,158 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   };
 
   const handleSearch = () => {
-    const student = students.find(s => 
-      s.roll.toString() === indivSearch.roll.toString() && 
-      s.studentClass === indivSearch.class && 
-      s.year === indivSearch.year
-    );
-    if (!student) {
-      alert('শিক্ষার্থী পাওয়া যায়নি।');
+    const searchRollNormalized = normalizeDigits(indivSearch.roll.trim());
+    
+    if (!searchRollNormalized) {
+      alert('অনুগ্রহ করে রোল নম্বর প্রদান করুন।');
       return;
     }
-    setFoundStudent(student);
-    setSearched(true);
+
+    const student = students.find(st => {
+      const studentRollNormalized = normalizeDigits(st.roll);
+      return studentRollNormalized === searchRollNormalized && 
+             st.studentClass === indivSearch.class && 
+             st.year === indivSearch.year;
+    });
+
+    if (student) {
+      setFoundStudent(student);
+      setSearched(true);
+    } else {
+      alert('শিক্ষার্থী পাওয়া যায়নি! রোল নম্বর এবং শ্রেণী পুনরায় পরীক্ষা করুন।');
+    }
   };
 
   const sortedBatchStudents = useMemo(() => {
-    let list = students
-      .filter(s => s.studentClass === batchFilter.class && s.year === batchFilter.year)
-      .filter(s => getSpecificResult(s.id, batchFilter.class, batchFilter.year, batchFilter.exam));
-
-    // Sort by Marks/Rank based on toggle
+    let list = students.filter(s => 
+      s.studentClass === batchFilter.class && 
+      s.year === batchFilter.year && 
+      getSpecificResult(s.id, batchFilter.class, batchFilter.year, batchFilter.exam)
+    );
+    
     list.sort((a, b) => {
-      const rankA = parseInt(getRank(a.id).toString()) || 999;
-      const rankB = parseInt(getRank(b.id).toString()) || 999;
-      
-      if (sortOrder === 'ASC') {
-        return rankB - rankA; // Worst to Best
+      let valA, valB;
+      if (batchSortKey === 'RANK') {
+        valA = parseInt(getRank(a.id).toString()) || 9999;
+        valB = parseInt(getRank(b.id).toString()) || 9999;
       } else {
-        return rankA - rankB; // Best to Worst (Default)
+        valA = parseInt(normalizeDigits(a.roll)) || 0;
+        valB = parseInt(normalizeDigits(b.roll)) || 0;
       }
+      return batchSortOrder === 'ASC' ? valA - valB : valB - valA;
     });
 
     return list;
-  }, [students, batchFilter, sortOrder, classRanking]);
-
-  const currentClassSubjects = useMemo(() => {
-    const targetClass = (searchType === 'BATCH') ? batchFilter.class : indivSearch.class;
-    return getSubjectsForClass(targetClass);
-  }, [indivSearch.class, batchFilter.class, classSubjectsMap, searchType]);
-
-  const isAnnual = (searchType === 'BATCH' ? batchFilter.exam : indivSearch.exam) === 'বার্ষিক পরীক্ষা';
+  }, [students, batchFilter, batchSortKey, batchSortOrder, classRanking]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 no-print">
-        <button onClick={() => setSearchType('INDIVIDUAL')} className={`flex-1 py-4 rounded-xl border-2 transition-all font-bold ${searchType === 'INDIVIDUAL' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600'}`}>একক পরীক্ষা</button>
-        <button onClick={() => setSearchType('BATCH')} className={`flex-1 py-4 rounded-xl border-2 transition-all font-bold ${searchType === 'BATCH' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600'}`}>শ্রেণী ভিত্তিক তালিকা</button>
+        <button onClick={() => setSearchType('INDIVIDUAL')} className={`flex-1 py-4 rounded-xl font-bold border-2 transition-all ${searchType === 'INDIVIDUAL' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600'}`}>ব্যক্তিগত ফলাফল</button>
+        <button onClick={() => setSearchType('BATCH')} className={`flex-1 py-4 rounded-xl font-bold border-2 transition-all ${searchType === 'BATCH' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600'}`}>মেধাতালিকা / তালিকা</button>
       </div>
 
       {searchType === 'INDIVIDUAL' && (
         <div className="space-y-8 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border dark:border-gray-700 max-w-2xl mx-auto no-print">
-            <h3 className="text-xl font-bold mb-6 text-indigo-800 dark:text-indigo-400 text-center">ফলাফল অনুসন্ধান করুন</h3>
+            <h3 className="text-xl font-bold mb-6 text-indigo-800 dark:text-indigo-400 text-center">ফলাফল অনুসন্ধান (বাংলা/EN রোল)</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div><label className="text-xs font-bold block mb-1">শ্রেণী</label><select className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded" value={indivSearch.class} onChange={e => setIndivSearch({...indivSearch, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1">সাল</label><select className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded" value={indivSearch.year} onChange={e => setIndivSearch({...indivSearch, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1">পরীক্ষা</label><select className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded" value={indivSearch.exam} onChange={e => setIndivSearch({...indivSearch, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1">রোল নম্বর (ENG)</label><input type="text" className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded font-sans" value={indivSearch.roll} onChange={e => setIndivSearch({...indivSearch, roll: e.target.value})} /></div>
-              <div className="md:col-span-4 mt-2"><button onClick={handleSearch} className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold shadow transform active:scale-95 transition-all">ফলাফল দেখুন</button></div>
+              <div><label className="text-xs font-bold block mb-1">শ্রেণী</label><select className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded outline-none" value={indivSearch.class} onChange={e => setIndivSearch({...indivSearch, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1">সাল</label><select className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded font-sans outline-none" value={indivSearch.year} onChange={e => setIndivSearch({...indivSearch, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1">পরীক্ষা</label><select className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded outline-none" value={indivSearch.exam} onChange={e => setIndivSearch({...indivSearch, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1 font-sans">রোল নম্বর</label><input type="text" placeholder="যেমন: ১ বা 1" className="w-full p-2 border dark:border-gray-600 bg-white dark:bg-gray-700 rounded font-sans outline-none" value={indivSearch.roll} onChange={e => setIndivSearch({...indivSearch, roll: e.target.value})} /></div>
+              <div className="md:col-span-4 mt-2"><button onClick={handleSearch} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold shadow transform active:scale-95 transition-all">ফলাফল দেখুন</button></div>
             </div>
           </div>
 
           {searched && foundStudent && (
-            getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
-              <div className="bg-white dark:bg-gray-800 p-6 md:p-10 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
-                 <div className="text-center mb-6 border-b-2 border-indigo-100 pb-4">
-                   <h1 className="text-3xl md:text-4xl font-black text-indigo-900 dark:text-indigo-400 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
-                   <div className="inline-block mt-2 bg-indigo-600 text-white px-6 py-1 rounded-full text-sm font-bold uppercase tracking-wider">{indivSearch.exam} মূল্যায়নপত্র</div>
-                 </div>
-                 <div className="grid grid-cols-2 mb-6 gap-4 text-xs md:text-sm">
-                   <div className="space-y-1">
-                     <p><strong>নাম:</strong> {foundStudent.name}</p>
-                     <p><strong>পিতা:</strong> {foundStudent.fatherName}</p>
-                     <p><strong>গ্রাম:</strong> {foundStudent.village}</p>
-                   </div>
-                   <div className="text-right space-y-1">
-                     <p><strong>রোল:</strong> <span className="font-sans font-bold">{foundStudent.roll}</span></p>
-                     <p><strong>শ্রেণী:</strong> {foundStudent.studentClass} (<span className="font-sans">{foundStudent.year}</span>)</p>
-                     <p><strong>মোবাইল:</strong> <span className="font-sans">{foundStudent.mobile}</span></p>
-                   </div>
-                 </div>
-                 
-                 <div className="overflow-x-auto">
-                   <table className="w-full text-left mb-6 border-collapse border border-gray-300">
-                     <thead className="bg-gray-100 dark:bg-gray-700 text-[10px] md:text-xs uppercase">
-                       <tr>
-                         <th className="px-3 py-2 border border-gray-300">বিষয়</th>
-                         {isAnnual && (
-                           <>
-                             <th className="px-3 py-2 border border-gray-300 text-center font-sans">১ম সাময়িক</th>
-                             <th className="px-3 py-2 border border-gray-300 text-center font-sans">২য় সাময়িক</th>
-                           </>
-                         )}
-                         <th className="px-3 py-2 border border-gray-300 text-center">{indivSearch.exam === 'বার্ষিক পরীক্ষা' ? 'বার্ষিক' : 'প্রাপ্ত নম্বর'}</th>
-                         {isAnnual && <th className="px-3 py-2 border border-gray-300 text-center bg-indigo-50 dark:bg-indigo-900/20">গড়</th>}
-                       </tr>
-                     </thead>
-                     <tbody className="text-[11px] md:text-sm">
-                       {currentClassSubjects.map(sub => {
-                         const r1 = getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'প্রথম সাময়িক');
-                         const r2 = getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'দ্বিতীয় সাময়িক');
-                         const r3 = getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'বার্ষিক পরীক্ষা');
-                         const rCurrent = getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam);
-
-                         const m1 = r1?.marks.find(m => m.subjectName === sub)?.marks || 0;
-                         const m2 = r2?.marks.find(m => m.subjectName === sub)?.marks || 0;
-                         const m3 = r3?.marks.find(m => m.subjectName === sub)?.marks || 0;
-                         const mCurrent = rCurrent?.marks.find(m => m.subjectName === sub)?.marks || 0;
-                         
-                         const avg = isAnnual ? ((m1 + m2 + m3) / 3).toFixed(1) : '-';
-
-                         return (
-                           <tr key={sub} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 font-sans">
-                             <td className="px-3 py-1.5 border border-gray-300 font-medium font-hind">{sub}</td>
-                             {isAnnual && (
-                               <>
-                                 <td className="px-3 py-1.5 border border-gray-300 text-center">{m1}</td>
-                                 <td className="px-3 py-1.5 border border-gray-300 text-center">{m2}</td>
-                               </>
-                             )}
-                             <td className="px-3 py-1.5 border border-gray-300 text-center font-bold text-indigo-700 dark:text-indigo-400">{mCurrent}</td>
-                             {isAnnual && <td className="px-3 py-1.5 border border-gray-300 text-center font-black bg-indigo-50/50 dark:bg-indigo-900/10">{avg}</td>}
-                           </tr>
-                         );
-                       })}
-                     </tbody>
-                     <tfoot className="font-bold bg-gray-50 dark:bg-gray-800 text-[11px] md:text-sm font-sans">
-                       <tr>
-                         <td className="px-3 py-2 border border-gray-300 text-right font-hind">মোট প্রাপ্ত নম্বর</td>
-                         {isAnnual && (
-                           <>
-                             <td className="px-3 py-2 border border-gray-300 text-center">{getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'প্রথম সাময়িক')?.totalMarks || 0}</td>
-                             <td className="px-3 py-2 border border-gray-300 text-center">{getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'দ্বিতীয় সাময়িক')?.totalMarks || 0}</td>
-                           </>
-                         )}
-                         <td className="px-3 py-2 border border-gray-300 text-center font-black text-indigo-800 dark:text-indigo-300">
-                           {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks || 0}
-                         </td>
-                         {isAnnual && (
-                           <td className="px-3 py-2 border border-gray-300 text-center font-black bg-indigo-50 dark:bg-indigo-900/20">
-                             {(( (getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'প্রথম সাময়িক')?.totalMarks || 0) + 
-                                (getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'দ্বিতীয় সাময়িক')?.totalMarks || 0) + 
-                                (getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, 'বার্ষিক পরীক্ষা')?.totalMarks || 0) ) / 3).toFixed(1)}
-                           </td>
-                         )}
-                       </tr>
-                     </tfoot>
-                   </table>
-                 </div>
-
-                 <div className="grid grid-cols-3 gap-3 md:gap-6 text-center mt-6">
-                    <div className="p-3 md:p-5 bg-green-50 dark:bg-green-900/10 rounded-2xl border-2 border-green-100 dark:border-green-800 grade-box">
-                      <span className="text-[9px] md:text-xs font-bold uppercase text-green-600 block mb-1">গ্রেড</span>
-                      <span className="font-black text-2xl md:text-3xl block text-green-700 dark:text-green-400 font-sans">
-                        {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade || '-'}
-                      </span>
-                    </div>
-                    <div className="p-3 md:p-5 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border-2 border-amber-100 dark:border-amber-800 shadow-inner grade-box">
-                      <span className="text-[9px] md:text-xs font-bold uppercase text-amber-600 block mb-1">{isAnnual ? 'মেধা স্থান' : 'স্থান'}</span>
-                      <span className="font-black text-2xl md:text-3xl block text-amber-700 dark:text-amber-400 font-sans">#{getRank(foundStudent.id)}</span>
-                    </div>
-                    <div className="p-3 md:p-5 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border-2 border-blue-100 dark:border-blue-800 grade-box">
-                      <span className="text-[9px] md:text-xs font-bold uppercase text-blue-600 block mb-1">ফলাফল</span>
-                      <span className="font-black text-lg md:text-2xl block text-blue-700 dark:text-blue-400">উত্তীর্ণ</span>
-                    </div>
-                 </div>
-
-                 <div className="no-print mt-10 flex justify-center gap-4">
-                   <button onClick={() => window.print()} className="bg-indigo-900 hover:bg-black text-white px-8 py-3 rounded-xl font-black shadow-xl transition-all flex items-center gap-2">
-                     <i className="fas fa-print"></i> মার্কশিট প্রিন্ট করুন
-                   </button>
-                 </div>
-              </div>
-            ) : (
-              <div className="text-center p-20 bg-amber-50 dark:bg-amber-900/10 rounded-3xl max-w-xl mx-auto border border-amber-100 dark:border-amber-800 font-bold text-amber-700 shadow-lg">
-                <i className="fas fa-exclamation-triangle text-4xl mb-4 block"></i>
-                ফলাফল এখনো প্রকাশিত হয়নি অথবা এই শিক্ষার্থীর তথ্য পাওয়া যায়নি।
-              </div>
-            )
+            <div className="bg-white dark:bg-gray-800 p-6 md:p-10 rounded-2xl shadow-2xl border dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
+               <div className="text-center mb-8 border-b-2 border-indigo-100 pb-4">
+                 <h1 className="text-3xl md:text-4xl font-black text-indigo-900 dark:text-indigo-400">আনওয়ারুল কুরআন একাডেমী</h1>
+                 <p className="mt-2 text-indigo-600 font-bold uppercase tracking-wider">{indivSearch.exam} মূল্যায়নপত্র</p>
+               </div>
+               <div className="grid grid-cols-2 mb-6 gap-4 text-sm">
+                 <div className="space-y-1"><p><strong>নাম:</strong> {foundStudent.name}</p><p><strong>পিতা:</strong> {foundStudent.fatherName}</p><p><strong>গ্রাম:</strong> {foundStudent.village}</p></div>
+                 <div className="text-right space-y-1"><p><strong>রোল:</strong> <span className="font-sans font-bold">{normalizeDigits(foundStudent.roll)}</span></p><p><strong>শ্রেণী:</strong> {foundStudent.studentClass} (<span className="font-sans">{foundStudent.year}</span>)</p><p><strong>মোবাইল:</strong> <span className="font-sans">{normalizeDigits(foundStudent.mobile)}</span></p></div>
+               </div>
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left mb-6 border-collapse border border-gray-300 font-sans">
+                   <thead className="bg-gray-100 dark:bg-gray-700 text-xs font-black">
+                     <tr><th className="px-3 py-2 border border-gray-300 font-hind">বিষয়</th><th className="px-3 py-2 border border-gray-300 text-center font-hind">প্রাপ্ত নম্বর</th></tr>
+                   </thead>
+                   <tbody>
+                     {(getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks || []).map(m => (
+                       <tr key={m.subjectName}><td className="px-3 py-1.5 border border-gray-300 font-hind">{m.subjectName}</td><td className="px-3 py-1.5 border border-gray-300 text-center font-bold">{m.marks}</td></tr>
+                     ))}
+                   </tbody>
+                   <tfoot className="font-black bg-gray-50 dark:bg-gray-800">
+                     <tr><td className="px-3 py-2 border border-gray-300 text-right font-hind">মোট নম্বর</td><td className="px-3 py-2 border border-gray-300 text-center text-indigo-600 font-bold">{getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks || 0}</td></tr>
+                   </tfoot>
+                 </table>
+               </div>
+               <div className="grid grid-cols-3 gap-4 text-center mt-6">
+                 <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-200 dark:border-green-800"><span className="text-xs font-bold text-green-600 block uppercase">গ্রেড</span><span className="font-black text-2xl font-sans">{getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade || '-'}</span></div>
+                 <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800"><span className="text-xs font-bold text-amber-600 block uppercase">স্থান</span><span className="font-black text-2xl font-sans">#{getRank(foundStudent.id)}</span></div>
+                 <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800"><span className="text-xs font-bold text-blue-600 block uppercase">ফলাফল</span><span className="font-black text-lg">উত্তীর্ণ</span></div>
+               </div>
+               <div className="no-print mt-10 flex justify-center"><button onClick={() => window.print()} className="bg-indigo-900 hover:bg-black text-white px-8 py-3 rounded-xl font-black shadow-xl transition-all flex items-center gap-2"><i className="fas fa-print"></i> প্রিন্ট করুন</button></div>
+            </div>
           )}
         </div>
       )}
 
       {searchType === 'BATCH' && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border dark:border-gray-700 overflow-hidden animate-fade-in">
-            <div className="p-8 bg-indigo-50 dark:bg-indigo-900/20 border-b dark:border-gray-700 no-print">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs font-bold block mb-1 text-gray-400">শ্রেণী</label>
-                  <select className="w-full p-2.5 rounded-xl border dark:bg-gray-700 dark:border-gray-600" value={batchFilter.class} onChange={e => setBatchFilter({...batchFilter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold block mb-1 text-gray-400">সাল (ENG)</label>
-                  <select className="w-full p-2.5 rounded-xl border dark:bg-gray-700 dark:border-gray-600 font-sans" value={batchFilter.year} onChange={e => setBatchFilter({...batchFilter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold block mb-1 text-gray-400">পরীক্ষা</label>
-                  <select className="w-full p-2.5 rounded-xl border dark:bg-gray-700 dark:border-gray-600" value={batchFilter.exam} onChange={e => setBatchFilter({...batchFilter, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select>
-                </div>
-              </div>
+        <div className="space-y-6 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border dark:border-gray-700 overflow-hidden">
+            <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 border-b dark:border-gray-700 no-print grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div><label className="text-xs font-bold block mb-1">শ্রেণী</label><select className="w-full p-2.5 rounded-xl border outline-none dark:bg-gray-700" value={batchFilter.class} onChange={e => setBatchFilter({...batchFilter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1">সাল</label><select className="w-full p-2.5 rounded-xl border font-sans outline-none dark:bg-gray-700" value={batchFilter.year} onChange={e => setBatchFilter({...batchFilter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1">পরীক্ষা</label><select className="w-full p-2.5 rounded-xl border outline-none dark:bg-gray-700" value={batchFilter.exam} onChange={e => setBatchFilter({...batchFilter, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
             </div>
-            
-            <div className="p-8">
-              <div className="hidden print:block text-center mb-8 border-b-2 border-gray-800 pb-4">
-                <h1 className="text-3xl font-black mb-1 text-indigo-900">আনওয়ারুল কুরআন একাডেমী</h1>
-                <h2 className="text-xl font-bold uppercase tracking-widest">{batchFilter.exam} - ফলাফল তালিকা</h2>
-                <p className="text-sm mt-2 font-bold">শ্রেণী: {batchFilter.class} | শিক্ষাবর্ষ: <span className="font-sans">{batchFilter.year}</span></p>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1000px]">
-                  <thead className="bg-gray-100 dark:bg-gray-700 font-bold text-[11px] uppercase text-gray-500">
-                    <tr>
-                      <th className="px-4 py-4 border-b border-gray-200 dark:border-gray-600">রোল (ENG)</th>
-                      <th className="px-4 py-4 border-b border-gray-200 dark:border-gray-600">নাম</th>
-                      {currentClassSubjects.map(s => <th key={s} className="px-3 py-4 border-b border-gray-200 dark:border-gray-600 text-center">{s}</th>)}
-                      
-                      {isAnnual && (
-                        <>
-                          <th className="px-3 py-4 border-b border-gray-200 dark:border-gray-600 text-center bg-gray-50 dark:bg-gray-800 font-black font-sans">১ম</th>
-                          <th className="px-3 py-4 border-b border-gray-200 dark:border-gray-600 text-center bg-gray-50 dark:bg-gray-800 font-black font-sans">২য়</th>
-                        </>
-                      )}
-                      
-                      <th className="px-4 py-4 border-b border-gray-200 dark:border-gray-600 text-center font-black font-sans">{isAnnual ? 'বার্ষিক' : 'মোট নম্বর'}</th>
-                      {isAnnual && <th className="px-4 py-4 border-b border-gray-200 dark:border-gray-600 text-center bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 font-black font-sans">গড়</th>}
-                      <th className="px-4 py-4 border-b border-gray-200 dark:border-gray-600 text-center">গ্রেড</th>
-                      
-                      {/* Interactive Sorting Header for Rank */}
-                      <th className="px-4 py-4 border-b border-gray-200 dark:border-gray-600 text-center bg-amber-50/30 dark:bg-amber-900/5 min-w-[100px]">
-                        <button 
-                          onClick={() => setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
-                          className="flex items-center gap-2 mx-auto hover:text-amber-600 transition-colors no-print"
-                        >
-                          স্থান 
-                          <i className={`fas fa-sort-${sortOrder === 'DESC' ? 'down' : 'up'}`}></i>
-                        </button>
-                        <span className="print:block hidden">স্থান</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y dark:divide-gray-700 text-xs md:text-sm font-sans">
-                    {sortedBatchStudents.map(s => {
-                      const rAnnual = getSpecificResult(s.id, batchFilter.class, batchFilter.year, 'বার্ষিক পরীক্ষা');
-                      const r1 = getSpecificResult(s.id, batchFilter.class, batchFilter.year, 'প্রথম সাময়িক');
-                      const r2 = getSpecificResult(s.id, batchFilter.class, batchFilter.year, 'দ্বিতীয় সাময়িক');
-                      const rCurrent = getSpecificResult(s.id, batchFilter.class, batchFilter.year, batchFilter.exam);
-                      if (!rCurrent) return null;
-
-                      const combinedAvg = isAnnual 
-                        ? (((r1?.totalMarks || 0) + (r2?.totalMarks || 0) + (rAnnual?.totalMarks || 0)) / 3).toFixed(1)
-                        : '-';
-
-                      return (
-                        <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                          <td className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-black text-indigo-700 dark:text-indigo-400">{s.roll}</td>
-                          <td className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 font-bold font-hind">{s.name}</td>
-                          {currentClassSubjects.map(sub => (
-                            <td key={sub} className="px-3 py-3 border-b border-gray-200 dark:border-gray-700 text-center text-gray-600 dark:text-gray-400">
-                              {rCurrent.marks.find(m => m.subjectName === sub)?.marks || '0'}
-                            </td>
-                          ))}
-                          {isAnnual && (
-                            <>
-                              <td className="px-3 py-3 border-b border-gray-200 dark:border-gray-700 text-center bg-gray-50/50 dark:bg-gray-800/20 font-medium text-gray-500">{r1?.totalMarks || 0}</td>
-                              <td className="px-3 py-3 border-b border-gray-200 dark:border-gray-700 text-center bg-gray-50/50 dark:bg-gray-800/20 font-medium text-gray-500">{r2?.totalMarks || 0}</td>
-                            </>
-                          )}
-                          <td className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-center font-black text-indigo-600">{rCurrent.totalMarks}</td>
-                          {isAnnual && <td className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-center font-black bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-800 dark:text-indigo-300">{combinedAvg}</td>}
-                          <td className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-center font-bold text-green-600">{rCurrent.grade}</td>
-                          <td className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-center font-black bg-amber-50/30 dark:bg-amber-900/5">#{getRank(s.id)}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              
-              {sortedBatchStudents.length > 0 && (
-                <div className="no-print mt-12 flex justify-center">
-                  <button onClick={() => window.print()} className="bg-indigo-900 hover:bg-black text-white px-12 py-4 rounded-2xl font-black shadow-2xl transform active:scale-95 transition-all flex items-center gap-3">
-                    <i className="fas fa-print text-xl"></i> পূর্ণাঙ্গ তালিকা প্রিন্ট করুন
-                  </button>
-                </div>
-              )}
+            <div className="p-6 overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead className="bg-gray-100 dark:bg-gray-700 text-[11px] font-black uppercase text-gray-500">
+                  <tr>
+                    <th 
+                      className="px-4 py-4 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      onClick={() => {
+                        if (batchSortKey === 'ROLL') setBatchSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+                        else { setBatchSortKey('ROLL'); setBatchSortOrder('ASC'); }
+                      }}
+                    >
+                      রোল (ENG) {batchSortKey === 'ROLL' && <i className={`fas fa-sort-${batchSortOrder === 'ASC' ? 'down' : 'up'} ml-1`}></i>}
+                    </th>
+                    <th className="px-4 py-4 font-hind">নাম</th>
+                    <th className="px-4 py-4 text-center">মোট নম্বর</th>
+                    <th className="px-4 py-4 text-center">গ্রেড</th>
+                    <th 
+                      className="px-4 py-4 text-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      onClick={() => {
+                        if (batchSortKey === 'RANK') setBatchSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+                        else { setBatchSortKey('RANK'); setBatchSortOrder('ASC'); }
+                      }}
+                    >
+                      স্থান {batchSortKey === 'RANK' && <i className={`fas fa-sort-${batchSortOrder === 'ASC' ? 'down' : 'up'} ml-1`}></i>}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y dark:divide-gray-700 font-sans">
+                  {sortedBatchStudents.map(s => {
+                    const res = getSpecificResult(s.id, batchFilter.class, batchFilter.year, batchFilter.exam);
+                    if (!res) return null;
+                    return (
+                      <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-4 py-3 font-black text-indigo-700">{normalizeDigits(s.roll)}</td>
+                        <td className="px-4 py-3 font-bold font-hind">{s.name}</td>
+                        <td className="px-4 py-3 text-center font-black">{res.totalMarks}</td>
+                        <td className="px-4 py-3 text-center font-bold text-green-600">{res.grade}</td>
+                        <td className="px-4 py-3 text-center font-black text-amber-600">#{getRank(s.id)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="no-print mt-8 flex justify-center"><button onClick={() => window.print()} className="bg-indigo-900 text-white px-10 py-3 rounded-xl font-black shadow-lg hover:bg-black transition-all"><i className="fas fa-print mr-2"></i> মেধাতালিকা প্রিন্ট</button></div>
             </div>
           </div>
         </div>
