@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Student, Result, ViewType, Notice } from './types';
 import TeacherPanel from './components/TeacherPanel';
@@ -64,6 +65,33 @@ const App: React.FC = () => {
     fetchAllData();
     const savedDarkMode = localStorage.getItem('school_dark_mode');
     if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode) === true);
+
+    // রিয়েল-টাইম নোটিফিকেশন লিসেনার
+    if (supabase) {
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notices' },
+          (payload) => {
+            const newNotice = payload.new as Notice;
+            setNotices(prev => [newNotice, ...prev]);
+            
+            // ব্রাউজার নোটিফিকেশন প্রদর্শন
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification("নতুন নোটিশ প্রকাশিত হয়েছে!", {
+                body: newNotice.text.substring(0, 100) + (newNotice.text.length > 100 ? "..." : ""),
+                icon: "/favicon.ico"
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
   useEffect(() => {
@@ -104,13 +132,18 @@ const App: React.FC = () => {
           <TeacherPanel 
             students={students} results={results} subjects={subjects} notices={notices}
             onSetSubjectsForClass={async (className, classSubjects) => {
-              const { error } = await supabase!.from('subjects').upsert({ class: className, subjects: classSubjects });
+              const { error } = await supabase!.from('subjects').upsert({ class: className, subjects: classSubjects }, { onConflict: 'class' });
               if (!error) { setSubjects(prev => ({ ...prev, [className]: classSubjects })); return true; }
               return false;
             }}
             onAddStudent={async (s) => {
               const { error } = await supabase!.from('students').insert(s);
               if (!error) { setStudents(prev => [...prev, s]); return true; }
+              return false;
+            }}
+            onAddStudents={async (list) => {
+              const { error } = await supabase!.from('students').insert(list);
+              if (!error) { setStudents(prev => [...prev, ...list]); return true; }
               return false;
             }}
             onUpdateStudent={async (s) => {
@@ -139,15 +172,20 @@ const App: React.FC = () => {
               return false;
             }}
             onUpdateNotices={async (n) => {
-              await supabase!.from('notices').delete().neq('id', '0');
+              // Delete existing notices and insert new ones or just handle per-item
+              const { error: delError } = await supabase!.from('notices').delete().neq('id', 'temp-never-exists');
+              if (delError) return false;
               const { error } = await supabase!.from('notices').insert(n);
               if (!error) { setNotices(n); return true; }
               return false;
             }}
             onUpdatePassword={async (p) => {
-              await supabase!.from('app_settings').upsert({ key: 'teacher_password', value: p });
-              setTeacherPassword(p);
-              handleLogout();
+              const { error } = await supabase!.from('app_settings').upsert({ key: 'teacher_password', value: p });
+              if (!error) {
+                setTeacherPassword(p);
+                alert('পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে। পুনরায় লগইন করুন।');
+                handleLogout();
+              }
             }}
             currentPassword={teacherPassword}
           />
