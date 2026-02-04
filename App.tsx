@@ -283,7 +283,10 @@ const App: React.FC = () => {
             <div className="flex flex-wrap justify-center gap-4">
               <div className="bg-indigo-50 dark:bg-indigo-900/20 px-5 py-2 rounded-2xl flex items-center gap-3 border border-indigo-100 dark:border-indigo-800">
                 <i className="fas fa-users text-indigo-600"></i>
-                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">বর্তমান শিক্ষার্থী: <span className="text-indigo-600 dark:text-indigo-400 font-black ml-1">{students.length} জন</span></span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-300">বর্তমান শিক্ষার্থী: <span className="text-indigo-600 dark:text-indigo-400 font-black ml-1">{students.length} জন</span></span>
+                  <span className="text-[8px] uppercase tracking-tighter text-gray-400 font-bold -mt-0.5">Powered by INTERNET SEBA</span>
+                </div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 px-5 py-2 rounded-2xl flex items-center gap-3 border border-amber-100 dark:border-amber-800">
                 <i className="fas fa-calendar-check text-amber-600"></i>
