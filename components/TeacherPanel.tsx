@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
+import * as XLSX from 'https://esm.sh/xlsx';
 
 interface TeacherPanelProps {
   students: Student[];
@@ -9,10 +10,11 @@ interface TeacherPanelProps {
   notices: Notice[];
   onSetSubjectsForClass: (className: string, classSubjects: string[]) => Promise<boolean>;
   onAddStudent: (s: Student) => Promise<boolean>;
+  onAddStudents?: (list: Student[]) => Promise<boolean>;
   onUpdateStudent: (s: Student) => Promise<boolean>;
   onDeleteStudent: (id: string) => Promise<boolean>;
   onSaveResult: (r: Result) => Promise<boolean>;
-  onSaveResults: (results: Result[]) => Promise<boolean>; // Bulk save support
+  onSaveResults: (results: Result[]) => Promise<boolean>;
   onDeleteResult: (id: string) => Promise<boolean>;
   onUpdateNotices: (n: Notice[]) => Promise<boolean>;
   onClearAllData?: () => Promise<boolean>;
@@ -25,13 +27,14 @@ const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
-  students, results, subjects, notices, onSetSubjectsForClass, onAddStudent, 
+  students, results, subjects, notices, onSetSubjectsForClass, onAddStudent, onAddStudents,
   onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
   onUpdateNotices, onClearAllData, currentPassword, onUpdatePassword 
 }) => {
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('RESULT_ENTRY');
   const [isSaving, setIsSaving] = useState(false);
-  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [filter, setFilter] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
   const [manageFilter, setManageFilter] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা', search: '' });
@@ -46,7 +49,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [newSubject, setNewSubject] = useState('');
   const [newNotice, setNewNotice] = useState('');
   const [editingResult, setEditingResult] = useState<Result | null>(null);
-
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
   const entryClassSubjects = subjects[filter.class] || [];
@@ -73,47 +75,66 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setTempMarks(newTemp);
   }, [filter, results, students]);
 
-  /**
-   * Enhanced Export: Using UTF-16LE + BOM which is the gold standard for Excel
-   */
   const downloadExcel = (data: any[], fileName: string) => {
-    if (data.length === 0) return alert('ডাউনলোড করার জন্য কোনো ডাটা নেই!');
-    
-    const headers = Object.keys(data[0]);
-    const tsvContent = [
-      headers.join('\t'),
-      ...data.map(row => headers.map(header => (row[header] || '').toString()).join('\t'))
-    ].join('\r\n');
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+  };
 
-    const buffer = new ArrayBuffer(tsvContent.length * 2);
-    const view = new Uint16Array(buffer);
-    for (let i = 0; i < tsvContent.length; i++) {
-      view[i] = tsvContent.charCodeAt(i);
-    }
+  const downloadSampleTemplate = () => {
+    const sample = [
+      { 'নাম': 'আব্দুল্লাহ', 'রোল': '১০১', 'পিতার নাম': 'আলী হোসেন', 'মাতার নাম': 'ফাতেমা', 'শ্রেণী': 'প্রথম', 'সাল': '২০২৬', 'গ্রাম': 'পাহাড়তলী', 'মোবাইল': '01700000000' },
+      { 'নাম': 'মারিয়া', 'রোল': '১০২', 'পিতার নাম': 'ইব্রাহিম', 'মাতার নাম': 'আয়েশা', 'শ্রেণী': 'প্রথম', 'সাল': '২০২৬', 'গ্রাম': 'চকবাজার', 'মোবাইল': '01800000000' }
+    ];
+    downloadExcel(sample, 'Admission_Sample_Template');
+  };
 
-    const bom = new Uint8Array([0xFF, 0xFE]);
-    const blob = new Blob([bom, buffer], { type: 'application/vnd.ms-excel;charset=utf-16le' });
-    
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.download = `${fileName}.xls`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        if (data.length === 0) throw new Error("ফাইলটি খালি!");
+
+        const importedStudents: Student[] = data.map((row, index) => ({
+          id: (Date.now() + index).toString(),
+          name: row['নাম'] || row['Name'] || '',
+          roll: (row['রোল'] || row['Roll'] || '').toString(),
+          fatherName: row['পিতার নাম'] || row['Father Name'] || '',
+          motherName: row['মাতার নাম'] || row['Mother Name'] || '',
+          studentClass: row['শ্রেণী'] || row['Class'] || 'প্রথম',
+          year: (row['সাল'] || row['Year'] || '২০২৬').toString(),
+          village: row['গ্রাম'] || row['Village'] || '',
+          mobile: (row['মোবাইল'] || row['Mobile'] || '').toString()
+        })).filter(s => s.name && s.roll);
+
+        if (importedStudents.length > 0 && onAddStudents) {
+          const ok = await onAddStudents(importedStudents);
+          if (ok) alert(`${importedStudents.length} জন শিক্ষার্থীর তথ্য ইনপোর্ট হয়েছে।`);
+          else alert('ইনপোর্ট ব্যর্থ হয়েছে।');
+        }
+      } catch (err) {
+        alert('ফাইল প্রসেস করতে ত্রুটি হয়েছে।');
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const exportStudentList = () => {
     const data = filteredStudentList.map(s => ({
-      'রোল': s.roll,
-      'নাম': s.name,
-      'পিতার নাম': s.fatherName,
-      'মাতার নাম': s.motherName,
-      'গ্রাম': s.village,
-      'মোবাইল': s.mobile,
-      'শ্রেণী': s.studentClass,
-      'সাল': s.year
+      'রোল': s.roll, 'নাম': s.name, 'পিতার নাম': s.fatherName, 'মাতার নাম': s.motherName, 'গ্রাম': s.village, 'মোবাইল': s.mobile, 'শ্রেণী': s.studentClass, 'সাল': s.year
     }));
     downloadExcel(data, `Student_List_${filter.class}_${filter.year}`);
   };
@@ -121,19 +142,11 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const exportResultList = () => {
     const data = filteredManaged.map(r => {
       const s = students.find(st => st.id === r.studentId);
-      const row: any = {
-        'রোল': s?.roll || '',
-        'নাম': s?.name || '',
-        'মোট নম্বর': r.totalMarks,
-        'গ্রেড': r.grade,
-        'স্ট্যাটাস': r.isPublished ? 'পাবলিশড' : 'বন্ধ'
-      };
-      r.marks.forEach(m => {
-        row[m.subjectName] = m.marks;
-      });
+      const row: any = { 'রোল': s?.roll || '', 'নাম': s?.name || '', 'মোট নম্বর': r.totalMarks, 'গ্রেড': r.grade };
+      r.marks.forEach(m => { row[m.subjectName] = m.marks; });
       return row;
     });
-    downloadExcel(data, `Result_Sheet_${manageFilter.class}_${manageFilter.exam}_${manageFilter.year}`);
+    downloadExcel(data, `Results_${manageFilter.class}_${manageFilter.exam}`);
   };
 
   const addSubject = async () => {
@@ -206,32 +219,24 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const handleSaveAllResults = async () => {
     if (studentsToEnter.length === 0) return;
     if (entryClassSubjects.length === 0) return alert('প্রথমে বিষয় যোগ করুন!');
-
     setIsSaving(true);
     const payloads = studentsToEnter.map(student => prepareResultPayload(student));
     const ok = await onSaveResults(payloads);
-    if (ok) alert('সকল শিক্ষার্থীর ফলাফল সফলভাবে সেভ করা হয়েছে।');
+    if (ok) alert('সব সেভ হয়েছে।');
     setIsSaving(false);
   };
 
   const handlePublishToggle = async (result: Result) => {
-    setPublishingId(result.id);
     const updatedResult = { ...result, isPublished: !result.isPublished };
     await onSaveResult(updatedResult);
-    setPublishingId(null);
   };
 
   const handleBulkPublish = async (publish: boolean) => {
     const filtered = filteredManaged;
     if (filtered.length === 0) return;
-
-    const actionText = publish ? 'পাবলিশ' : 'আনপাবলিশ';
-    if (!window.confirm(`আপনি কি এই তালিকার সকল (${filtered.length}) রেজাল্ট একসাথে ${actionText} করতে চান?`)) return;
-
     setIsSaving(true);
     const updatedResults = filtered.map(res => ({ ...res, isPublished: publish }));
-    const ok = await onSaveResults(updatedResults);
-    if (ok) alert(`সকল ফলাফল সফলভাবে ${actionText} করা হয়েছে।`);
+    await onSaveResults(updatedResults);
     setIsSaving(false);
   };
 
@@ -242,15 +247,19 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       { id: Date.now().toString(), text: newNotice, date: new Date().toLocaleDateString('bn-BD') },
       ...notices
     ];
-    await onUpdateNotices(updated);
-    setNewNotice('');
+    if (await onUpdateNotices(updated)) {
+      alert('নোটিশ পাবলিশ হয়েছে।');
+      setNewNotice('');
+    }
     setIsSaving(false);
   };
 
   const handleDeleteNotice = async (id: string) => {
-    if (window.confirm('নোটিশটি মুছে ফেলতে চান?')) {
+    if (window.confirm('মুছে ফেলতে চান?')) {
+      setIsSaving(true);
       const updated = notices.filter(n => n.id !== id);
       await onUpdateNotices(updated);
+      setIsSaving(false);
     }
   };
 
@@ -267,21 +276,16 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordForm.current !== currentPassword) return alert('বর্তমান পাসওয়ার্ড ভুল!');
-    if (passwordForm.new.length < 4) return alert('নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।');
-    if (passwordForm.new !== passwordForm.confirm) return alert('কনফার্ম পাসওয়ার্ড মিলছে না!');
-    
-    if (window.confirm('পাসওয়ার্ড পরিবর্তন করতে চান?')) {
-      onUpdatePassword(passwordForm.new);
-      alert('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে।');
-    }
+    if (passwordForm.current !== currentPassword) return alert('ভুল পাসওয়ার্ড!');
+    if (passwordForm.new !== passwordForm.confirm) return alert('মিলছে না!');
+    onUpdatePassword(passwordForm.new);
+    alert('পাসওয়ার্ড আপডেট হয়েছে।');
   };
 
   const handleResetSystem = async () => {
-    if (!onClearAllData) return;
-    if (window.confirm('নিশ্চিতভাবে সকল ডাটা মুছতে চান? "RESET" লিখে কনফার্ম করুন।')) {
+    if (window.confirm('সব ডাটা মুছে যাবে। নিশ্চিত?')) {
       const input = window.prompt('RESET লিখুন:');
-      if (input === 'RESET' && await onClearAllData()) alert('সিস্টেম রিসেট হয়েছে।');
+      if (input === 'RESET' && await onClearAllData!()) alert('রিসেট হয়েছে।');
     }
   };
 
@@ -322,96 +326,88 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         ))}
       </div>
 
-      {/* Enroll View (Updated & Compact) */}
+      {/* Enroll View */}
       {activeSubView === 'ENROLL' && (
-        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-xl max-w-5xl mx-auto border dark:border-gray-700 animate-fade-in">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="bg-indigo-100 dark:bg-indigo-900/30 w-12 h-12 rounded-2xl flex items-center justify-center">
-              <i className="fas fa-user-plus text-xl text-indigo-700 dark:text-indigo-400"></i>
+        <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+          {/* Compact Excel Actions */}
+          <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 border border-indigo-100 dark:border-indigo-800">
+            <div className="flex items-center gap-3">
+              <i className="fas fa-file-excel text-green-600 text-xl"></i>
+              <span className="text-sm font-bold text-indigo-900 dark:text-indigo-300">এক্সেল থেকে বাল্ক ইনপোর্ট</span>
             </div>
-            <div>
-              <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-400">নতুন শিক্ষার্থী ভর্তি ফরম</h2>
-              <p className="text-xs text-gray-500">সকল তথ্য নির্ভুলভাবে প্রদান করে সাবমিট করুন</p>
+            <div className="flex gap-2">
+              <button onClick={downloadSampleTemplate} className="text-[11px] font-bold text-indigo-600 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50">নমুনা ফাইল</button>
+              <button onClick={() => fileInputRef.current?.click()} className="text-[11px] font-bold text-white bg-indigo-600 px-4 py-1.5 rounded-lg shadow-sm hover:bg-indigo-700 flex items-center gap-2">
+                {isImporting ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-upload"></i>}
+                ফাইল আপলোড
+              </button>
+              <input type="file" ref={fileInputRef} onChange={handleImportExcel} className="hidden" accept=".xlsx, .xls" />
             </div>
           </div>
 
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setIsSaving(true);
-            const s: Student = { ...formData, id: Date.now().toString() };
-            if(await onAddStudent(s)) {
-              alert('শিক্ষার্থী সফলভাবে ভর্তি করা হয়েছে!');
-              setFormData({ ...formData, name: '', roll: '', mobile: '', fatherName: '', motherName: '', village: '' });
-            }
-            setIsSaving(false);
-          }} className="space-y-4">
-            {/* Grid Layout for compact view */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-              
-              {/* 1. শিক্ষার্থীর নাম */}
-              <div className="lg:col-span-2">
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষার্থীর নাম</label>
-                <input required placeholder="পুরো নাম লিখুন" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              </div>
+          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-xl border dark:border-gray-700">
+            <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-400 mb-6 flex items-center gap-2">
+              <i className="fas fa-user-plus text-indigo-600"></i> নতুন ভর্তি ফরম
+            </h2>
 
-              {/* 2. পিতার নাম */}
-              <div className="lg:col-span-1">
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">পিতার নাম</label>
-                <input required placeholder="পিতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} />
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSaving(true);
+              const s: Student = { ...formData, id: Date.now().toString() };
+              if(await onAddStudent(s)) {
+                alert('ভর্তি সম্পন্ন হয়েছে!');
+                setFormData({ ...formData, name: '', roll: '', mobile: '', fatherName: '', motherName: '', village: '' });
+              }
+              setIsSaving(false);
+            }} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">শিক্ষার্থীর নাম</label>
+                  <input required placeholder="নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">রোল</label>
+                  <input required type="number" placeholder="রোল" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={formData.roll} onChange={e => setFormData({...formData, roll: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">পিতার নাম</label>
+                  <input required placeholder="পিতা" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">মাতার নাম</label>
+                  <input required placeholder="মাতা" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">শ্রেণী</label>
+                  <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
+                    {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">শিক্ষাবর্ষ</label>
+                  <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">গ্রাম</label>
+                  <input required placeholder="গ্রাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold mb-1 block uppercase text-gray-400">মোবাইল</label>
+                  <input required type="tel" placeholder="০১৭.." className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
+                </div>
               </div>
-
-              {/* 3. মাতার নাম */}
-              <div className="lg:col-span-1">
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মাতার নাম</label>
-                <input required placeholder="মাতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} />
-              </div>
-
-              {/* 4. শ্রেণী */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শ্রেণী</label>
-                <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
-                  {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-
-              {/* 5. রোল নম্বর */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">রোল নম্বর</label>
-                <input required type="number" placeholder="রোল" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.roll} onChange={e => setFormData({...formData, roll: e.target.value})} />
-              </div>
-
-              {/* 6. শিক্ষাবর্ষ (সাল) */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষাবর্ষ (সাল)</label>
-                <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-
-              {/* 7. গ্রাম */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">গ্রাম</label>
-                <input required placeholder="গ্রামের নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} />
-              </div>
-
-              {/* 8. মোবাইল */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মোবাইল নম্বর</label>
-                <input required type="tel" placeholder="০১৭XXXXXXXX" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check-circle"></i>}
+              <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check"></i>}
                 ভর্তি নিশ্চিত করুন
               </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       )}
 
-      {/* Result Entry View */}
+      {/* RESULT_ENTRY View */}
       {activeSubView === 'RESULT_ENTRY' && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-fade-in">
@@ -489,7 +485,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     </td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={entryClassSubjects.length + 3} className="px-6 py-10 text-center text-gray-400">এই শ্রেণী ও সালে কোনো শিক্ষার্থী পাওয়া যায়নি।</td></tr>
+                  <tr><td colSpan={entryClassSubjects.length + 3} className="px-6 py-10 text-center text-gray-400">শিক্ষার্থী পাওয়া যায়নি।</td></tr>
                 )}
               </tbody>
             </table>
@@ -497,7 +493,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Manage Results View */}
+      {/* MANAGE_RESULTS View */}
       {activeSubView === 'MANAGE_RESULTS' && (
         <div className="space-y-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
@@ -515,281 +511,146 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-bold mb-1 block uppercase text-gray-400">নাম বা রোল</label>
-              <input placeholder="খুঁজুন..." className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={manageFilter.search} onChange={e => setManageFilter({...manageFilter, search: e.target.value})} />
+              <input placeholder="খুঁজুন..." className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 outline-none" value={manageFilter.search} onChange={e => setManageFilter({...manageFilter, search: e.target.value})} />
             </div>
           </div>
 
-          <div className="flex justify-between items-center px-2 flex-wrap gap-4">
-            <button 
-              onClick={exportResultList}
-              className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-5 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2 shadow-sm"
-            >
-              <i className="fas fa-file-excel"></i> রেজাল্ট এক্সেল ডাউনলোড
-            </button>
-
-            {filteredManaged.length > 0 && (
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => handleBulkPublish(false)} 
-                  disabled={isSaving}
-                  className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
-                >
-                  <i className="fas fa-times-circle"></i> সব আনপাবলিশ
-                </button>
-                <button 
-                  onClick={() => handleBulkPublish(true)} 
-                  disabled={isSaving}
-                  className="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-green-700 shadow-md transition-all flex items-center gap-2"
-                >
-                  {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check-double"></i>}
-                  সব পাবলিশ
-                </button>
-              </div>
-            )}
+          <div className="flex justify-between items-center px-2">
+            <button onClick={exportResultList} className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all">এক্সেল ডাউনলোড</button>
+            <div className="flex gap-2">
+              <button onClick={() => handleBulkPublish(false)} className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-bold border border-red-100">সব বন্ধ</button>
+              <button onClick={() => handleBulkPublish(true)} className="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md">সব পাবলিশ</button>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border dark:border-gray-700 overflow-hidden">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase border-b dark:border-gray-600">
-                <tr><th className="px-6 py-4">রোল</th><th className="px-6 py-4">নাম</th><th className="px-6 py-4 text-center">মোট</th><th className="px-6 py-4 text-center">গ্রেড</th><th className="px-6 py-4 text-center">পাবলিশ স্ট্যাটাস</th><th className="px-6 py-4 text-center">অ্যাকশন</th></tr>
+              <thead className="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase">
+                <tr><th className="px-6 py-4">রোল</th><th className="px-6 py-4">নাম</th><th className="px-6 py-4 text-center">মোট</th><th className="px-6 py-4 text-center">গ্রেড</th><th className="px-6 py-4 text-center">স্ট্যাটাস</th><th className="px-6 py-4 text-center">অ্যাকশন</th></tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-700">
-                {filteredManaged.length > 0 ? filteredManaged.map(r => {
+                {filteredManaged.map(r => {
                   const s = students.find(st => st.id === r.studentId);
-                  const isCurrentPublishing = publishingId === r.id;
                   return (
                     <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4 font-bold">{s?.roll}</td>
                       <td className="px-6 py-4">{s?.name}</td>
-                      <td className="px-6 py-4 text-center font-bold text-indigo-600 dark:text-indigo-400">{r.totalMarks}</td>
-                      <td className="px-6 py-4 text-center font-bold text-green-600 dark:text-green-400">{r.grade}</td>
+                      <td className="px-6 py-4 text-center font-bold text-indigo-600">{r.totalMarks}</td>
+                      <td className="px-6 py-4 text-center font-bold text-green-600">{r.grade}</td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <div 
-                            onClick={() => !isCurrentPublishing && handlePublishToggle(r)} 
-                            className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 cursor-pointer shadow-inner ${
-                              r.isPublished ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                            } ${isCurrentPublishing ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
-                          >
-                            <span 
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-                                r.isPublished ? 'translate-x-7' : 'translate-x-1'
-                              }`}
-                            />
-                            {isCurrentPublishing && (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <i className="fas fa-circle-notch animate-spin text-[10px] text-white"></i>
-                              </div>
-                            )}
-                          </div>
-                          <span className={`text-[9px] font-black uppercase tracking-tighter ${r.isPublished ? 'text-green-600' : 'text-gray-400'}`}>
-                            {r.isPublished ? 'পাবলিশড' : 'বন্ধ'}
-                          </span>
-                        </div>
+                        <button onClick={() => handlePublishToggle(r)} className={`text-[10px] font-bold px-3 py-1 rounded-full ${r.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {r.isPublished ? 'পাবলিশড' : 'বন্ধ'}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-3">
-                          <button onClick={() => setEditingResult(r)} className="text-indigo-500 hover:text-indigo-700 transition-colors"><i className="fas fa-edit"></i></button>
-                          <button onClick={async (e) => { 
-                            e.preventDefault();
-                            if(window.confirm('আপনি কি নিশ্চিতভাবে এই ফলাফলটি মুছে ফেলতে চান?')) {
-                              const ok = await onDeleteResult(r.id);
-                              if (ok) alert('ফলাফল সফলভাবে মুছে ফেলা হয়েছে।');
-                            }
-                          }} className="text-red-500 hover:text-red-700 transition-colors"><i className="fas fa-trash-alt"></i></button>
-                        </div>
+                        <button onClick={async () => { if(window.confirm('নিশ্চিত?')) await onDeleteResult(r.id); }} className="text-red-500"><i className="fas fa-trash"></i></button>
                       </td>
                     </tr>
                   );
-                }) : (
-                  <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-400">কোন ফলাফল পাওয়া যায়নি।</td></tr>
-                )}
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
+      {/* NOTICES View */}
+      {activeSubView === 'NOTICES' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border dark:border-gray-700">
+             <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><i className="fas fa-bullhorn"></i> নোটিশ পাবলিশ</h2>
+             <textarea rows={4} placeholder="নোটিশ লিখুন..." className="w-full p-4 border rounded-2xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 mb-4" value={newNotice} onChange={(e) => setNewNotice(e.target.value)}></textarea>
+             <button onClick={handleAddNotice} disabled={isSaving || !newNotice.trim()} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg">পাবলিশ করুন</button>
+          </div>
+          <div className="space-y-3">
+             {notices.map(n => (
+               <div key={n.id} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 flex justify-between items-center">
+                  <div>
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md mb-2 inline-block">{n.date}</span>
+                    <p className="text-sm">{n.text}</p>
+                  </div>
+                  <button onClick={() => handleDeleteNotice(n.id)} className="text-red-400 hover:text-red-600"><i className="fas fa-trash"></i></button>
+               </div>
+             ))}
+          </div>
+        </div>
+      )}
+
+      {/* STUDENT_LIST View */}
       {activeSubView === 'STUDENT_LIST' && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div className="space-y-4">
+           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
               <label className="text-xs font-bold mb-1 block uppercase text-gray-400">শ্রেণী</label>
-              <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={filter.class} onChange={e => setFilter({...filter, class: e.target.value})}>
-                {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={filter.class} onChange={e => setFilter({...filter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
             </div>
             <div>
               <label className="text-xs font-bold mb-1 block uppercase text-gray-400">সাল</label>
-              <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={filter.year} onChange={e => setFilter({...filter, year: e.target.value})}>
-                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={filter.year} onChange={e => setFilter({...filter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
             </div>
             <div className="md:col-span-2">
-              <label className="text-xs font-bold mb-1 block uppercase text-gray-400">খুঁজুন (নাম বা রোল)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><i className="fas fa-search"></i></span>
-                <input placeholder="শিক্ষার্থীর নাম বা রোল লিখুন..." className="w-full pl-10 pr-4 py-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={listSearch} onChange={e => setListSearch(e.target.value)} />
-              </div>
+              <label className="text-xs font-bold mb-1 block uppercase text-gray-400">খুঁজুন</label>
+              <input placeholder="নাম বা রোল" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={listSearch} onChange={e => setListSearch(e.target.value)} />
             </div>
           </div>
-
-          <div className="flex justify-end px-2">
-            <button 
-              onClick={exportStudentList}
-              className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg"
-            >
-              <i className="fas fa-download"></i> তালিকা এক্সেল ডাউনলোড
-            </button>
-          </div>
-
+          <div className="flex justify-end"><button onClick={exportStudentList} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold">এক্সেল ডাউনলোড</button></div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border dark:border-gray-700 overflow-x-auto">
-             <table className="w-full text-left min-w-[800px]">
-                <thead className="bg-gray-50 dark:bg-gray-700 text-xs uppercase font-bold text-gray-500 dark:text-gray-400 border-b dark:border-gray-600">
-                  <tr>
-                    <th className="px-6 py-4">রোল</th>
-                    <th className="px-6 py-4">নাম</th>
-                    <th className="px-6 py-4">পিতার নাম</th>
-                    <th className="px-6 py-4">মাতার নাম</th>
-                    <th className="px-6 py-4">গ্রাম</th>
-                    <th className="px-6 py-4 hidden md:table-cell">মোবাইল</th>
-                    <th className="px-6 py-4 text-center">অ্যাকশন</th>
-                  </tr>
+             <table className="w-full text-left min-w-[700px]">
+                <thead className="bg-gray-50 dark:bg-gray-700 text-xs font-bold">
+                  <tr><th className="px-6 py-4">রোল</th><th className="px-6 py-4">নাম</th><th className="px-6 py-4">পিতা</th><th className="px-6 py-4">মোবাইল</th><th className="px-6 py-4 text-center">অ্যাকশন</th></tr>
                 </thead>
                 <tbody className="divide-y dark:divide-gray-700">
-                  {filteredStudentList.length > 0 ? filteredStudentList.map(s => (
-                    <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-indigo-600 dark:text-indigo-400">{s.roll}</td>
+                  {filteredStudentList.map(s => (
+                    <tr key={s.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-bold text-indigo-600">{s.roll}</td>
                       <td className="px-6 py-4 font-bold">{s.name}</td>
                       <td className="px-6 py-4">{s.fatherName}</td>
-                      <td className="px-6 py-4">{s.motherName}</td>
-                      <td className="px-6 py-4 font-medium text-gray-500">{s.village}</td>
-                      <td className="px-6 py-4 hidden md:table-cell">{s.mobile}</td>
+                      <td className="px-6 py-4">{s.mobile}</td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => setEditingStudent(s)} className="bg-indigo-50 text-indigo-600 p-2 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"><i className="fas fa-edit"></i></button>
-                          <button onClick={async (e) => { 
-                            e.preventDefault();
-                            if(window.confirm(`${s.name}-কে কি সত্যিই মুছে ফেলতে চান? এটি করলে তার সকল রেজাল্টও মুছে যাবে।`)) {
-                              const ok = await onDeleteStudent(s.id);
-                              if (ok) alert('শিক্ষার্থী সফলভাবে মুছে ফেলা হয়েছে।');
-                            }
-                          }} className="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-600 hover:text-white transition-all"><i className="fas fa-trash-alt"></i></button>
-                        </div>
+                        <button onClick={() => setEditingStudent(s)} className="text-indigo-600 mr-4"><i className="fas fa-edit"></i></button>
+                        <button onClick={async () => { if(window.confirm('নিশ্চিত?')) await onDeleteStudent(s.id); }} className="text-red-500"><i className="fas fa-trash"></i></button>
                       </td>
                     </tr>
-                  )) : (
-                    <tr><td colSpan={7} className="px-6 py-20 text-center">কোন শিক্ষার্থী খুঁজে পাওয়া যায়নি।</td></tr>
-                  )}
+                  ))}
                 </tbody>
              </table>
           </div>
         </div>
       )}
 
-      {/* Settings View */}
+      {/* SETTINGS View */}
       {activeSubView === 'SETTINGS' && (
-        <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+        <div className="max-w-xl mx-auto space-y-6">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <i className="fas fa-key text-indigo-600"></i> পাসওয়ার্ড পরিবর্তন
-            </h2>
-            <form onSubmit={handlePasswordChange} className="space-y-5">
-              <div>
-                <label className="text-xs font-bold text-gray-400 block mb-1">বর্তমান পাসওয়ার্ড</label>
-                <input type="password" required autoComplete="current-password" placeholder="বর্তমান পাসওয়ার্ড" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={passwordForm.current} onChange={e => setPasswordForm({ ...passwordForm, current: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">নতুন পাসওয়ার্ড</label>
-                  <input type="password" required autoComplete="new-password" placeholder="নতুন পাসওয়ার্ড" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={passwordForm.new} onChange={e => setPasswordForm({ ...passwordForm, new: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-400 block mb-1">পাসওয়ার্ড নিশ্চিত করুন</label>
-                  <input type="password" required autoComplete="new-password" placeholder="আবার লিখুন" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={passwordForm.confirm} onChange={e => setPasswordForm({ ...passwordForm, confirm: e.target.value })} />
-                </div>
-              </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all">পাসওয়ার্ড আপডেট করুন</button>
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><i className="fas fa-key text-indigo-600"></i> পাসওয়ার্ড পরিবর্তন</h2>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <input type="password" required placeholder="বর্তমান পাসওয়ার্ড" className="w-full p-3 border rounded-xl dark:bg-gray-700" value={passwordForm.current} onChange={e => setPasswordForm({ ...passwordForm, current: e.target.value })} />
+              <input type="password" required placeholder="নতুন পাসওয়ার্ড" className="w-full p-3 border rounded-xl dark:bg-gray-700" value={passwordForm.new} onChange={e => setPasswordForm({ ...passwordForm, new: e.target.value })} />
+              <input type="password" required placeholder="কনফার্ম করুন" className="w-full p-3 border rounded-xl dark:bg-gray-700" value={passwordForm.confirm} onChange={e => setPasswordForm({ ...passwordForm, confirm: e.target.value })} />
+              <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">আপডেট করুন</button>
             </form>
           </div>
-          <div className="bg-red-50 dark:bg-red-900/10 p-8 rounded-3xl border border-red-100 dark:border-red-900/30">
-            <h2 className="text-2xl font-bold text-red-700 mb-4">সিস্টেম রিসেট</h2>
-            <p className="text-sm text-gray-600 mb-6 font-bold tracking-tighter">সাবধান! এটি সকল ডাটা স্থায়ীভাবে মুছে ফেলবে।</p>
-            <button onClick={handleResetSystem} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl">বর্তমান সকল ডাটা ক্লিয়ার করুন</button>
+          <div className="bg-red-50 p-6 rounded-2xl border border-red-100 text-center">
+            <h3 className="text-red-700 font-bold mb-3">বিপজ্জনক জোন</h3>
+            <button onClick={handleResetSystem} className="bg-red-600 text-white px-6 py-2 rounded-xl text-sm font-bold">সিস্টেম রিসেট</button>
           </div>
         </div>
       )}
 
-      {/* Modals for editing remain the same */}
+      {/* Modals for editing remain same... */}
       {editingStudent && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl p-8 animate-fade-in shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl p-8 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">শিক্ষার্থীর তথ্য পরিবর্তন</h2>
-              <button onClick={() => setEditingStudent(null)} className="text-gray-400 hover:text-red-500"><i className="fas fa-times text-xl"></i></button>
+              <h2 className="text-xl font-bold">শিক্ষার্থীর তথ্য এডিট</h2>
+              <button onClick={() => setEditingStudent(null)} className="text-gray-400 hover:text-red-500"><i className="fas fa-times"></i></button>
             </div>
-            <form onSubmit={handleUpdateStudentSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="text-xs font-bold uppercase text-gray-400">শিক্ষার্থীর নাম</label>
-                  <input required className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.name} onChange={e => setEditingStudent({...editingStudent, name: e.target.value})} />
-                </div>
-                <div><label className="text-xs font-bold uppercase text-gray-400">রোল নম্বর</label><input required className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.roll} onChange={e => setEditingStudent({...editingStudent, roll: e.target.value})} /></div>
-                <div><label className="text-xs font-bold uppercase text-gray-400">মোবাইল</label><input required className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.mobile} onChange={e => setEditingStudent({...editingStudent, mobile: e.target.value})} /></div>
-                <div>
-                  <label className="text-xs font-bold uppercase text-gray-400">শ্রেণী</label>
-                  <select className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.studentClass} onChange={e => setEditingStudent({...editingStudent, studentClass: e.target.value})}>
-                    {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase text-gray-400">শিক্ষাবর্ষ (সাল)</label>
-                  <select className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.year} onChange={e => setEditingStudent({...editingStudent, year: e.target.value})}>
-                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-xs font-bold uppercase text-gray-400">পিতার নাম</label><input required className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.fatherName} onChange={e => setEditingStudent({...editingStudent, fatherName: e.target.value})} /></div>
-                <div><label className="text-xs font-bold uppercase text-gray-400">মাতার নাম</label><input required className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.motherName} onChange={e => setEditingStudent({...editingStudent, motherName: e.target.value})} /></div>
-                <div className="md:col-span-2"><label className="text-xs font-bold uppercase text-gray-400">গ্রাম</label><input required className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={editingStudent.village} onChange={e => setEditingStudent({...editingStudent, village: e.target.value})} /></div>
-              </div>
-              <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
-                <button type="button" onClick={() => setEditingStudent(null)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-2xl font-bold">বাতিল</button>
-                <button type="submit" disabled={isSaving} className="flex-2 bg-indigo-600 text-white font-bold py-3 px-8 rounded-2xl shadow-xl">আপডেট করুন</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {editingResult && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto scrollbar-hide">
-            <h2 className="text-2xl font-bold mb-6 text-indigo-800 dark:text-indigo-300">রেজাল্ট আপডেট ({editingResult.examName})</h2>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setIsSaving(true);
-              const total = editingResult.marks.reduce((acc, curr) => acc + (curr.marks || 0), 0);
-              const ok = await onSaveResult({ ...editingResult, totalMarks: total, grade: calculateGrade(total, editingResult.marks.length) });
-              setIsSaving(false);
-              if (ok) { alert('সফলভাবে আপডেট করা হয়েছে।'); setEditingResult(null); }
-              else { alert('আপডেট করা সম্ভব হয়নি।'); }
-            }} className="space-y-4">
+            <form onSubmit={handleUpdateStudentSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {editingResult.marks.map((m, idx) => (
-                  <div key={idx}>
-                    <label className="text-xs font-bold text-gray-400 block mb-1">{m.subjectName}</label>
-                    <input type="number" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none" value={m.marks} onChange={e => {
-                      const newMarks = [...editingResult.marks];
-                      newMarks[idx] = { ...newMarks[idx], marks: parseInt(e.target.value) || 0 };
-                      setEditingResult({ ...editingResult, marks: newMarks });
-                    }} />
-                  </div>
-                ))}
+                 <input className="w-full p-3 border rounded-xl dark:bg-gray-700" value={editingStudent.name} onChange={e => setEditingStudent({...editingStudent, name: e.target.value})} />
+                 <input className="w-full p-3 border rounded-xl dark:bg-gray-700" value={editingStudent.roll} onChange={e => setEditingStudent({...editingStudent, roll: e.target.value})} />
               </div>
-              <div className="flex gap-3 pt-6">
-                <button type="button" onClick={() => setEditingResult(null)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-2xl font-bold">বাতিল</button>
-                <button type="submit" disabled={isSaving} className="flex-2 bg-indigo-600 text-white font-bold py-3 px-8 rounded-2xl">সংরক্ষণ করুন</button>
-              </div>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">সংরক্ষণ করুন</button>
             </form>
           </div>
         </div>

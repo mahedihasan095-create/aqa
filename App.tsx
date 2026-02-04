@@ -130,6 +130,14 @@ const App: React.FC = () => {
               }
               return false;
             }}
+            onAddStudents={async (list) => {
+              const { error } = await supabase!.from('students').insert(list);
+              if (!error) {
+                setStudents(prev => [...prev, ...list]);
+                return true;
+              }
+              return false;
+            }}
             onUpdateStudent={async (s) => {
               const { error } = await supabase!.from('students').update(s).eq('id', s.id);
               if (!error) {
@@ -189,7 +197,6 @@ const App: React.FC = () => {
               return false;
             }}
             onUpdateNotices={async (updatedNotices) => {
-              // সাধারণ নোটিশ ম্যানেজমেন্ট - সব ডিলিট করে নতুন ইনসার্ট (সহজ করার জন্য)
               await supabase!.from('notices').delete().neq('id', '0');
               const { error } = await supabase!.from('notices').insert(updatedNotices);
               if (!error) {
