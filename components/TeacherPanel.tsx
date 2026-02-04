@@ -73,6 +73,72 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setTempMarks(newTemp);
   }, [filter, results, students]);
 
+  /**
+   * Enhanced Export: Using UTF-16LE + BOM which is the gold standard for Excel
+   * This ensures Bengali text appears perfectly on both Windows and Mac.
+   */
+  const downloadExcel = (data: any[], fileName: string) => {
+    if (data.length === 0) return alert('ডাউনলোড করার জন্য কোনো ডাটা নেই!');
+    
+    const headers = Object.keys(data[0]);
+    const tsvContent = [
+      headers.join('\t'),
+      ...data.map(row => headers.map(header => (row[header] || '').toString()).join('\t'))
+    ].join('\r\n');
+
+    // Convert string to UTF-16LE
+    const buffer = new ArrayBuffer(tsvContent.length * 2);
+    const view = new Uint16Array(buffer);
+    for (let i = 0; i < tsvContent.length; i++) {
+      view[i] = tsvContent.charCodeAt(i);
+    }
+
+    // Add BOM for UTF-16LE (0xFF, 0xFE)
+    const bom = new Uint8Array([0xFF, 0xFE]);
+    const blob = new Blob([bom, buffer], { type: 'application/vnd.ms-excel;charset=utf-16le' });
+    
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `${fileName}.xls`; // Using .xls forces Excel to handle the content as a spreadhseet
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportStudentList = () => {
+    const data = filteredStudentList.map(s => ({
+      'রোল': s.roll,
+      'নাম': s.name,
+      'পিতার নাম': s.fatherName,
+      'মাতার নাম': s.motherName,
+      'গ্রাম': s.village,
+      'মোবাইল': s.mobile,
+      'শ্রেণী': s.studentClass,
+      'সাল': s.year
+    }));
+    downloadExcel(data, `Student_List_${filter.class}_${filter.year}`);
+  };
+
+  const exportResultList = () => {
+    const data = filteredManaged.map(r => {
+      const s = students.find(st => st.id === r.studentId);
+      const row: any = {
+        'রোল': s?.roll || '',
+        'নাম': s?.name || '',
+        'মোট নম্বর': r.totalMarks,
+        'গ্রেড': r.grade,
+        'স্ট্যাটাস': r.isPublished ? 'পাবলিশড' : 'বন্ধ'
+      };
+      r.marks.forEach(m => {
+        row[m.subjectName] = m.marks;
+      });
+      return row;
+    });
+    downloadExcel(data, `Result_Sheet_${manageFilter.class}_${manageFilter.exam}_${manageFilter.year}`);
+  };
+
   const addSubject = async () => {
     const trimmed = newSubject.trim();
     if (trimmed && !entryClassSubjects.includes(trimmed)) {
@@ -107,7 +173,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     .filter(s => s.studentClass === filter.class && s.year === filter.year)
     .sort((a,b) => parseInt(a.roll) - parseInt(b.roll));
 
-  // Single Student Result Prep (used for both single and bulk)
   const prepareResultPayload = (student: Student) => {
     const marksForStudent = tempMarks[student.id] || {};
     const subjectMarks: SubjectMarks[] = entryClassSubjects.map(name => ({ 
@@ -240,7 +305,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Sub Menu */}
       <div className="flex flex-wrap gap-2 border-b dark:border-gray-700 pb-2 no-print overflow-x-auto scrollbar-hide">
         {[
           { id: 'RESULT_ENTRY', label: 'ফলাফল এন্ট্রি', icon: 'fa-edit' },
@@ -260,7 +324,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         ))}
       </div>
 
-      {/* Notice Board View */}
       {activeSubView === 'NOTICES' && (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border dark:border-gray-700">
@@ -305,7 +368,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Result Entry View */}
       {activeSubView === 'RESULT_ENTRY' && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-fade-in">
@@ -391,7 +453,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Manage Results View */}
       {activeSubView === 'MANAGE_RESULTS' && (
         <div className="space-y-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
@@ -413,25 +474,34 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             </div>
           </div>
 
-          {filteredManaged.length > 0 && (
-            <div className="flex justify-end gap-3 px-2">
-              <button 
-                onClick={() => handleBulkPublish(false)} 
-                disabled={isSaving}
-                className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
-              >
-                <i className="fas fa-times-circle"></i> সব আনপাবলিশ
-              </button>
-              <button 
-                onClick={() => handleBulkPublish(true)} 
-                disabled={isSaving}
-                className="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-green-700 shadow-md transition-all flex items-center gap-2"
-              >
-                {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check-double"></i>}
-                সব পাবলিশ
-              </button>
-            </div>
-          )}
+          <div className="flex justify-between items-center px-2 flex-wrap gap-4">
+            <button 
+              onClick={exportResultList}
+              className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-5 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2 shadow-sm"
+            >
+              <i className="fas fa-file-excel"></i> রেজাল্ট এক্সেল ডাউনলোড
+            </button>
+
+            {filteredManaged.length > 0 && (
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => handleBulkPublish(false)} 
+                  disabled={isSaving}
+                  className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
+                >
+                  <i className="fas fa-times-circle"></i> সব আনপাবলিশ
+                </button>
+                <button 
+                  onClick={() => handleBulkPublish(true)} 
+                  disabled={isSaving}
+                  className="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-green-700 shadow-md transition-all flex items-center gap-2"
+                >
+                  {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check-double"></i>}
+                  সব পাবলিশ
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border dark:border-gray-700 overflow-hidden">
             <table className="w-full text-left">
@@ -495,8 +565,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Other views remain same... */}
-      {/* Student List View */}
       {activeSubView === 'STUDENT_LIST' && (
         <div className="space-y-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -519,6 +587,15 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <input placeholder="শিক্ষার্থীর নাম বা রোল লিখুন..." className="w-full pl-10 pr-4 py-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={listSearch} onChange={e => setListSearch(e.target.value)} />
               </div>
             </div>
+          </div>
+
+          <div className="flex justify-end px-2">
+            <button 
+              onClick={exportStudentList}
+              className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg"
+            >
+              <i className="fas fa-download"></i> তালিকা এক্সেল ডাউনলোড
+            </button>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border dark:border-gray-700 overflow-x-auto">
@@ -565,7 +642,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Enroll View */}
       {activeSubView === 'ENROLL' && (
         <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl max-w-4xl mx-auto border dark:border-gray-700 animate-fade-in">
           <div className="flex items-center gap-4 mb-8">
@@ -643,7 +719,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Settings View */}
       {activeSubView === 'SETTINGS' && (
         <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border dark:border-gray-700">
@@ -676,8 +751,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Modals remain unchanged... */}
-      {/* Edit Student Modal */}
       {editingStudent && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl p-8 animate-fade-in shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
@@ -718,7 +791,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Edit Result Modal */}
       {editingResult && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto scrollbar-hide">
