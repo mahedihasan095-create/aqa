@@ -75,7 +75,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   /**
    * Enhanced Export: Using UTF-16LE + BOM which is the gold standard for Excel
-   * This ensures Bengali text appears perfectly on both Windows and Mac.
    */
   const downloadExcel = (data: any[], fileName: string) => {
     if (data.length === 0) return alert('ডাউনলোড করার জন্য কোনো ডাটা নেই!');
@@ -86,21 +85,19 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       ...data.map(row => headers.map(header => (row[header] || '').toString()).join('\t'))
     ].join('\r\n');
 
-    // Convert string to UTF-16LE
     const buffer = new ArrayBuffer(tsvContent.length * 2);
     const view = new Uint16Array(buffer);
     for (let i = 0; i < tsvContent.length; i++) {
       view[i] = tsvContent.charCodeAt(i);
     }
 
-    // Add BOM for UTF-16LE (0xFF, 0xFE)
     const bom = new Uint8Array([0xFF, 0xFE]);
     const blob = new Blob([bom, buffer], { type: 'application/vnd.ms-excel;charset=utf-16le' });
     
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = `${fileName}.xls`; // Using .xls forces Excel to handle the content as a spreadhseet
+    link.download = `${fileName}.xls`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -305,6 +302,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Sub Menu */}
       <div className="flex flex-wrap gap-2 border-b dark:border-gray-700 pb-2 no-print overflow-x-auto scrollbar-hide">
         {[
           { id: 'RESULT_ENTRY', label: 'ফলাফল এন্ট্রি', icon: 'fa-edit' },
@@ -324,50 +322,96 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         ))}
       </div>
 
-      {activeSubView === 'NOTICES' && (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <i className="fas fa-bullhorn text-amber-500"></i> নতুন নোটিশ যুক্ত করুন
-            </h2>
-            <div className="flex gap-4">
-              <textarea 
-                className="flex-1 p-4 border rounded-2xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px]" 
-                placeholder="নোটিশের বিস্তারিত লিখুন..." 
-                value={newNotice} 
-                onChange={e => setNewNotice(e.target.value)}
-              ></textarea>
-              <button 
-                onClick={handleAddNotice}
-                disabled={isSaving || !newNotice.trim()}
-                className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 active:scale-95 disabled:opacity-50 transition-all h-fit self-end"
-              >
-                পাবলিশ
-              </button>
+      {/* Enroll View (Updated & Compact) */}
+      {activeSubView === 'ENROLL' && (
+        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-xl max-w-5xl mx-auto border dark:border-gray-700 animate-fade-in">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-indigo-100 dark:bg-indigo-900/30 w-12 h-12 rounded-2xl flex items-center justify-center">
+              <i className="fas fa-user-plus text-xl text-indigo-700 dark:text-indigo-400"></i>
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-400">নতুন শিক্ষার্থী ভর্তি ফরম</h2>
+              <p className="text-xs text-gray-500">সকল তথ্য নির্ভুলভাবে প্রদান করে সাবমিট করুন</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase text-gray-400 tracking-widest px-2">প্রকাশিত নোটিশসমূহ</h3>
-            {notices.length > 0 ? notices.map(notice => (
-              <div key={notice.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border dark:border-gray-700 flex justify-between items-start gap-4">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-amber-600 uppercase">{notice.date}</p>
-                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{notice.text}</p>
-                </div>
-                <button onClick={() => handleDeleteNotice(notice.id)} className="text-red-100 hover:text-red-500 p-2 transition-colors">
-                  <i className="fas fa-trash-alt"></i>
-                </button>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setIsSaving(true);
+            const s: Student = { ...formData, id: Date.now().toString() };
+            if(await onAddStudent(s)) {
+              alert('শিক্ষার্থী সফলভাবে ভর্তি করা হয়েছে!');
+              setFormData({ ...formData, name: '', roll: '', mobile: '', fatherName: '', motherName: '', village: '' });
+            }
+            setIsSaving(false);
+          }} className="space-y-4">
+            {/* Grid Layout for compact view */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+              
+              {/* 1. শিক্ষার্থীর নাম */}
+              <div className="lg:col-span-2">
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষার্থীর নাম</label>
+                <input required placeholder="পুরো নাম লিখুন" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
-            )) : (
-              <div className="text-center py-20 bg-gray-100 dark:bg-gray-800/50 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                <p className="text-gray-400 font-bold">এখনো কোন নোটিশ প্রকাশ করা হয়নি</p>
+
+              {/* 2. পিতার নাম */}
+              <div className="lg:col-span-1">
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">পিতার নাম</label>
+                <input required placeholder="পিতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} />
               </div>
-            )}
-          </div>
+
+              {/* 3. মাতার নাম */}
+              <div className="lg:col-span-1">
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মাতার নাম</label>
+                <input required placeholder="মাতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} />
+              </div>
+
+              {/* 4. শ্রেণী */}
+              <div>
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শ্রেণী</label>
+                <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
+                  {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              {/* 5. রোল নম্বর */}
+              <div>
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">রোল নম্বর</label>
+                <input required type="number" placeholder="রোল" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.roll} onChange={e => setFormData({...formData, roll: e.target.value})} />
+              </div>
+
+              {/* 6. শিক্ষাবর্ষ (সাল) */}
+              <div>
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষাবর্ষ (সাল)</label>
+                <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
+                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+
+              {/* 7. গ্রাম */}
+              <div>
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">গ্রাম</label>
+                <input required placeholder="গ্রামের নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} />
+              </div>
+
+              {/* 8. মোবাইল */}
+              <div>
+                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মোবাইল নম্বর</label>
+                <input required type="tel" placeholder="০১৭XXXXXXXX" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check-circle"></i>}
+                ভর্তি নিশ্চিত করুন
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
+      {/* Result Entry View */}
       {activeSubView === 'RESULT_ENTRY' && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-fade-in">
@@ -453,6 +497,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
+      {/* Manage Results View */}
       {activeSubView === 'MANAGE_RESULTS' && (
         <div className="space-y-4 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
@@ -642,83 +687,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {activeSubView === 'ENROLL' && (
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl max-w-4xl mx-auto border dark:border-gray-700 animate-fade-in">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="bg-indigo-100 dark:bg-indigo-900/30 w-14 h-14 rounded-2xl flex items-center justify-center">
-              <i className="fas fa-user-plus text-2xl text-indigo-700 dark:text-indigo-400"></i>
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-400">নতুন শিক্ষার্থী ভর্তি</h2>
-              <p className="text-sm text-gray-500">শিক্ষার্থীর সকল তথ্য নির্ভুলভাবে প্রদান করুন</p>
-            </div>
-          </div>
-
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setIsSaving(true);
-            const s: Student = { ...formData, id: Date.now().toString() };
-            if(await onAddStudent(s)) {
-              alert('ভর্তি সফল হয়েছে!');
-              setFormData({ ...formData, name: '', roll: '', mobile: '', fatherName: '', motherName: '', village: '' });
-            }
-            setIsSaving(false);
-          }} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase text-indigo-600 border-b pb-1">ব্যক্তিগত ও একাডেমিক তথ্য</h3>
-                <div>
-                  <label className="text-xs font-bold mb-1 block uppercase text-gray-400">শিক্ষার্থীর নাম</label>
-                  <input required placeholder="নাম লিখুন" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold mb-1 block uppercase text-gray-400">রোল নম্বর</label>
-                    <input required placeholder="রোল" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.roll} onChange={e => setFormData({...formData, roll: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold mb-1 block uppercase text-gray-400">শ্রেণী</label>
-                    <select className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
-                      {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold mb-1 block uppercase text-gray-400">শিক্ষাবর্ষ (সাল)</label>
-                  <select className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
-                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase text-indigo-600 border-b pb-1">অভিভাবক ও ঠিকানা</h3>
-                <div>
-                  <label className="text-xs font-bold mb-1 block uppercase text-gray-400">পিতার নাম</label>
-                  <input required placeholder="পিতার নাম" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} />
-                </div>
-                <div>
-                  <label className="text-xs font-bold mb-1 block uppercase text-gray-400">মাতার নাম</label>
-                  <input required placeholder="মাতার নাম" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold mb-1 block uppercase text-gray-400">গ্রাম</label>
-                    <input required placeholder="গ্রাম" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold mb-1 block uppercase text-gray-400">মোবাইল</label>
-                    <input required placeholder="মোবাইল নম্বর" className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-xl transform active:scale-95 transition-all">
-              ভর্তি নিশ্চিত করুন
-            </button>
-          </form>
-        </div>
-      )}
-
+      {/* Settings View */}
       {activeSubView === 'SETTINGS' && (
         <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border dark:border-gray-700">
@@ -751,6 +720,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
+      {/* Modals for editing remain the same */}
       {editingStudent && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl p-8 animate-fade-in shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
