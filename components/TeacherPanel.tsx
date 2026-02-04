@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
 
 interface TeacherPanelProps {
@@ -9,6 +9,7 @@ interface TeacherPanelProps {
   notices: Notice[];
   onSetSubjectsForClass: (className: string, classSubjects: string[]) => Promise<boolean>;
   onAddStudent: (s: Student) => Promise<boolean>;
+  onAddStudents: (sList: Student[]) => Promise<boolean>;
   onUpdateStudent: (s: Student) => Promise<boolean>;
   onDeleteStudent: (id: string) => Promise<boolean>;
   onSaveResult: (r: Result) => Promise<boolean>;
@@ -25,7 +26,7 @@ const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
-  students, results, subjects, notices, onSetSubjectsForClass, onAddStudent, 
+  students, results, subjects, notices, onSetSubjectsForClass, onAddStudent, onAddStudents,
   onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
   onUpdateNotices, onClearAllData, currentPassword, onUpdatePassword 
 }) => {
@@ -46,6 +47,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [newSubject, setNewSubject] = useState('');
   const [newNotice, setNewNotice] = useState('');
   const [editingResult, setEditingResult] = useState<Result | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
@@ -73,27 +76,20 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setTempMarks(newTemp);
   }, [filter, results, students]);
 
-  /**
-   * Enhanced Export: Using UTF-16LE + BOM which is the gold standard for Excel
-   */
   const downloadExcel = (data: any[], fileName: string) => {
     if (data.length === 0) return alert('ডাউনলোড করার জন্য কোনো ডাটা নেই!');
-    
     const headers = Object.keys(data[0]);
     const tsvContent = [
       headers.join('\t'),
       ...data.map(row => headers.map(header => (row[header] || '').toString()).join('\t'))
     ].join('\r\n');
-
     const buffer = new ArrayBuffer(tsvContent.length * 2);
     const view = new Uint16Array(buffer);
     for (let i = 0; i < tsvContent.length; i++) {
       view[i] = tsvContent.charCodeAt(i);
     }
-
     const bom = new Uint8Array([0xFF, 0xFE]);
     const blob = new Blob([bom, buffer], { type: 'application/vnd.ms-excel;charset=utf-16le' });
-    
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
@@ -116,6 +112,89 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       'সাল': s.year
     }));
     downloadExcel(data, `Student_List_${filter.class}_${filter.year}`);
+  };
+
+  const downloadImportTemplate = () => {
+    const template = [{
+      'নাম': 'আরিফ হোসেন',
+      'পিতার নাম': 'কামাল হোসেন',
+      'মাতার নাম': 'ফাতেমা বেগম',
+      'শ্রেণী': 'প্রথম',
+      'রোল নম্বর': '১০১',
+      'শিক্ষাবর্ষ': '২০২৬',
+      'গ্রাম': 'নূরনগর',
+      'মোবাইল নম্বর': '০১৭০০০০০০০০'
+    }];
+    downloadExcel(template, 'Student_Import_Template');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        // TextDecoder automatically handles Bengali encoding better
+        const decoder = new TextDecoder('utf-16le');
+        let content = decoder.decode(new Uint16Array(arrayBuffer));
+        
+        // Check if it looks like UTF-16LE, if not try UTF-8
+        if (content.length < 10) {
+          content = new TextDecoder('utf-8').decode(new Uint8Array(arrayBuffer));
+        }
+
+        const rows = content.split(/\r?\n/).filter(row => row.trim() !== '');
+        if (rows.length < 2) return alert('ফাইলটি খালি অথবা ভুল ফরম্যাটে আছে!');
+
+        const headers = rows[0].split('\t').map(h => h.trim().replace(/^"|"$/g, ''));
+        const newStudents: Student[] = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const cols = rows[i].split('\t').map(c => c.trim().replace(/^"|"$/g, ''));
+          if (cols.length < headers.length) continue;
+
+          const studentData: any = {};
+          headers.forEach((h, idx) => {
+            if (h === 'নাম') studentData.name = cols[idx];
+            if (h === 'পিতার নাম') studentData.fatherName = cols[idx];
+            if (h === 'মাতার নাম') studentData.motherName = cols[idx];
+            if (h === 'শ্রেণী') studentData.studentClass = cols[idx];
+            if (h === 'রোল নম্বর') studentData.roll = cols[idx];
+            if (h === 'শিক্ষাবর্ষ') studentData.year = cols[idx];
+            if (h === 'গ্রাম') studentData.village = cols[idx];
+            if (h === 'মোবাইল নম্বর') studentData.mobile = cols[idx];
+          });
+
+          if (studentData.name && studentData.roll) {
+            newStudents.push({
+              ...studentData,
+              id: `std_${Date.now()}_${i}`,
+              studentClass: studentData.studentClass || 'প্রথম',
+              year: studentData.year || '২০২৬'
+            });
+          }
+        }
+
+        if (newStudents.length > 0) {
+          if (window.confirm(`মোট ${newStudents.length} জন শিক্ষার্থীর তথ্য পাওয়া গেছে। ইম্পোর্ট করতে চান?`)) {
+            setIsSaving(true);
+            const ok = await onAddStudents(newStudents);
+            if (ok) alert('সাফল্যের সাথে ইম্পোর্ট করা হয়েছে!');
+            setIsSaving(false);
+            setShowImport(false);
+          }
+        } else {
+          alert('কোন বৈধ শিক্ষার্থীর তথ্য পাওয়া যায়নি। অনুগ্রহ করে টেমপ্লেটটি অনুসরণ করুন।');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('ফাইলটি প্রসেস করতে সমস্যা হয়েছে।');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const exportResultList = () => {
@@ -322,92 +401,108 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         ))}
       </div>
 
-      {/* Enroll View (Updated & Compact) */}
+      {/* Enroll View (Updated & Compact with Bulk Import) */}
       {activeSubView === 'ENROLL' && (
-        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-xl max-w-5xl mx-auto border dark:border-gray-700 animate-fade-in">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="bg-indigo-100 dark:bg-indigo-900/30 w-12 h-12 rounded-2xl flex items-center justify-center">
-              <i className="fas fa-user-plus text-xl text-indigo-700 dark:text-indigo-400"></i>
+        <div className="space-y-6 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-xl max-w-5xl mx-auto border dark:border-gray-700">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-indigo-100 dark:bg-indigo-900/30 w-12 h-12 rounded-2xl flex items-center justify-center">
+                  <i className="fas fa-user-plus text-xl text-indigo-700 dark:text-indigo-400"></i>
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-400">শিক্ষার্থী ভর্তি ফরম</h2>
+                  <p className="text-xs text-gray-500">নিচে তথ্য দিন অথবা এক্সেল ফাইল ইম্পোর্ট করুন</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                 <button 
+                  onClick={() => setShowImport(!showImport)}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg transition-all flex items-center gap-2"
+                >
+                  <i className={`fas ${showImport ? 'fa-keyboard' : 'fa-file-excel'}`}></i>
+                  {showImport ? 'ম্যানুয়াল এন্ট্রি' : 'এক্সেল ইম্পোর্ট'}
+                </button>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-400">নতুন শিক্ষার্থী ভর্তি ফরম</h2>
-              <p className="text-xs text-gray-500">সকল তথ্য নির্ভুলভাবে প্রদান করে সাবমিট করুন</p>
-            </div>
+
+            {showImport ? (
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 p-8 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800 text-center space-y-4">
+                <i className="fas fa-cloud-upload-alt text-5xl text-indigo-400 mb-2"></i>
+                <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-300">এক্সেল ফাইল ইম্পোর্ট করুন</h3>
+                <p className="text-sm text-gray-500 max-w-md mx-auto">প্রথমে নিচের বাটন থেকে টেমপ্লেটটি ডাউনলোড করে নিন এবং আপনার শিক্ষার্থীদের তথ্য সেই ফাইলে সাজিয়ে এখানে আপলোড করুন।</p>
+                <div className="flex flex-wrap justify-center gap-4 pt-4">
+                  <button 
+                    onClick={downloadImportTemplate}
+                    className="bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-600 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-indigo-50 transition-all flex items-center gap-2"
+                  >
+                    <i className="fas fa-download"></i> টেমপ্লেট ডাউনলোড
+                  </button>
+                  <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-black shadow-lg cursor-pointer transition-all flex items-center gap-2">
+                    <i className="fas fa-file-upload"></i> ফাইল সিলেক্ট করুন
+                    <input type="file" ref={fileInputRef} accept=".xls,.csv" className="hidden" onChange={handleFileUpload} />
+                  </label>
+                </div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Supported: .xls, .tsv (Excel formats)</p>
+              </div>
+            ) : (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setIsSaving(true);
+                const s: Student = { ...formData, id: Date.now().toString() };
+                if(await onAddStudent(s)) {
+                  alert('শিক্ষার্থী সফলভাবে ভর্তি করা হয়েছে!');
+                  setFormData({ ...formData, name: '', roll: '', mobile: '', fatherName: '', motherName: '', village: '' });
+                }
+                setIsSaving(false);
+              }} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                  <div className="lg:col-span-2">
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষার্থীর নাম</label>
+                    <input required placeholder="পুরো নাম লিখুন" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">পিতার নাম</label>
+                    <input required placeholder="পিতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মাতার নাম</label>
+                    <input required placeholder="মাতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শ্রেণী</label>
+                    <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
+                      {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">রোল নম্বর</label>
+                    <input required type="number" placeholder="রোল" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.roll} onChange={e => setFormData({...formData, roll: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষাবর্ষ (সাল)</label>
+                    <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
+                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">গ্রাম</label>
+                    <input required placeholder="গ্রামের নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মোবাইল নম্বর</label>
+                    <input required type="tel" placeholder="০১৭XXXXXXXX" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                    {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check-circle"></i>}
+                    ভর্তি নিশ্চিত করুন
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
-
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setIsSaving(true);
-            const s: Student = { ...formData, id: Date.now().toString() };
-            if(await onAddStudent(s)) {
-              alert('শিক্ষার্থী সফলভাবে ভর্তি করা হয়েছে!');
-              setFormData({ ...formData, name: '', roll: '', mobile: '', fatherName: '', motherName: '', village: '' });
-            }
-            setIsSaving(false);
-          }} className="space-y-4">
-            {/* Grid Layout for compact view */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-              
-              {/* 1. শিক্ষার্থীর নাম */}
-              <div className="lg:col-span-2">
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষার্থীর নাম</label>
-                <input required placeholder="পুরো নাম লিখুন" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              </div>
-
-              {/* 2. পিতার নাম */}
-              <div className="lg:col-span-1">
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">পিতার নাম</label>
-                <input required placeholder="পিতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.fatherName} onChange={e => setFormData({...formData, fatherName: e.target.value})} />
-              </div>
-
-              {/* 3. মাতার নাম */}
-              <div className="lg:col-span-1">
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মাতার নাম</label>
-                <input required placeholder="মাতার নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.motherName} onChange={e => setFormData({...formData, motherName: e.target.value})} />
-              </div>
-
-              {/* 4. শ্রেণী */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শ্রেণী</label>
-                <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
-                  {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-
-              {/* 5. রোল নম্বর */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">রোল নম্বর</label>
-                <input required type="number" placeholder="রোল" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.roll} onChange={e => setFormData({...formData, roll: e.target.value})} />
-              </div>
-
-              {/* 6. শিক্ষাবর্ষ (সাল) */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">শিক্ষাবর্ষ (সাল)</label>
-                <select className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-
-              {/* 7. গ্রাম */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">গ্রাম</label>
-                <input required placeholder="গ্রামের নাম" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} />
-              </div>
-
-              {/* 8. মোবাইল */}
-              <div>
-                <label className="text-[11px] font-bold mb-1 block uppercase text-gray-400">মোবাইল নম্বর</label>
-                <input required type="tel" placeholder="০১৭XXXXXXXX" className="w-full p-2.5 border rounded-xl dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-xl transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                {isSaving ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-check-circle"></i>}
-                ভর্তি নিশ্চিত করুন
-              </button>
-            </div>
-          </form>
         </div>
       )}
 
@@ -720,7 +815,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         </div>
       )}
 
-      {/* Modals for editing remain the same */}
       {editingStudent && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl p-8 animate-fade-in shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">

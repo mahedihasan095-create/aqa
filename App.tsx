@@ -25,7 +25,6 @@ const App: React.FC = () => {
   const [loginError, setLoginError] = useState<boolean>(false);
   const [teacherPassword, setTeacherPassword] = useState<string>('admin123');
 
-  // Supabase থেকে সকল ডাটা লোড করা
   const fetchAllData = async () => {
     if (!supabase) return;
     setDbStatus('CONNECTING');
@@ -130,6 +129,14 @@ const App: React.FC = () => {
               }
               return false;
             }}
+            onAddStudents={async (sList) => {
+              const { error } = await supabase!.from('students').insert(sList);
+              if (!error) {
+                setStudents(prev => [...prev, ...sList]);
+                return true;
+              }
+              return false;
+            }}
             onUpdateStudent={async (s) => {
               const { error } = await supabase!.from('students').update(s).eq('id', s.id);
               if (!error) {
@@ -189,7 +196,6 @@ const App: React.FC = () => {
               return false;
             }}
             onUpdateNotices={async (updatedNotices) => {
-              // সাধারণ নোটিশ ম্যানেজমেন্ট - সব ডিলিট করে নতুন ইনসার্ট (সহজ করার জন্য)
               await supabase!.from('notices').delete().neq('id', '0');
               const { error } = await supabase!.from('notices').insert(updatedNotices);
               if (!error) {
@@ -227,7 +233,7 @@ const App: React.FC = () => {
 
       {showPasswordModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-8 shadow-2xl border dark:border-gray-700 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 w-full max-md rounded-3xl p-8 shadow-2xl border dark:border-gray-700 animate-fade-in">
             <div className="text-center mb-6">
               <div className="bg-indigo-100 dark:bg-indigo-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i className="fas fa-lock text-2xl text-indigo-600"></i>
