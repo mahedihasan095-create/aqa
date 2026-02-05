@@ -8,6 +8,7 @@ interface TeacherPanelProps {
   results: Result[];
   subjects: Record<string, string[]>;
   notices: Notice[];
+  principalSignature?: string;
   onSetSubjectsForClass: (className: string, classSubjects: string[]) => Promise<boolean>;
   onAddStudent: (s: Student) => Promise<boolean>;
   onAddStudents?: (list: Student[]) => Promise<boolean>;
@@ -18,6 +19,7 @@ interface TeacherPanelProps {
   onDeleteResult: (id: string) => Promise<boolean>;
   onUpdateNotices: (n: Notice[]) => Promise<boolean>;
   onUpdatePassword: (newPass: string) => void;
+  onUpdatePrincipalSignature: (signatureBase64: string) => Promise<boolean>;
   currentPassword: string;
 }
 
@@ -26,13 +28,14 @@ const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
-  students, results, subjects, notices, onSetSubjectsForClass, onAddStudent, onAddStudents,
+  students, results, subjects, notices, principalSignature, onSetSubjectsForClass, onAddStudent, onAddStudents,
   onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
-  onUpdateNotices, onUpdatePassword, currentPassword 
+  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, currentPassword 
 }) => {
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('STUDENT_LIST');
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sigInputRef = useRef<HTMLInputElement>(null);
   
   const [newPass, setNewPass] = useState('');
   const [subjectClass, setSubjectClass] = useState('প্রথম');
@@ -42,6 +45,9 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [filter, setFilter] = useState({ class: 'প্রথম', year: '২০২৬' });
   const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
   const [bulkMarks, setBulkMarks] = useState<Record<string, Record<string, string>>>({});
+
+  // Edit Student State
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   const [formData, setFormData] = useState({ 
     name: '', fatherName: '', motherName: '', village: '', mobile: '', studentClass: 'প্রথম', year: '২০২৬', roll: '' 
@@ -95,6 +101,20 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    setIsProcessing(true);
+    const success = await onUpdateStudent(editingStudent);
+    if (success) {
+      alert('তথ্য সফলভাবে আপডেট করা হয়েছে!');
+      setEditingStudent(null);
+    } else {
+      alert('আপডেট করতে সমস্যা হয়েছে।');
+    }
+    setIsProcessing(false);
+  };
+
   const handleDownloadSample = () => {
     const sampleData = [{ 'Name': 'আঃ রহমান', 'Roll': '1', 'Father Name': 'আব্দুল্লাহ', 'Mother Name': 'আয়েশা', 'Mobile': '01700', 'Village': 'মধুপুর', 'Class': 'প্রথম', 'Year': '২০২৬' }];
     const ws = XLSX.utils.json_to_sheet(sampleData);
@@ -134,6 +154,20 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       finally { setIsProcessing(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
     };
     reader.readAsBinaryString(file);
+  };
+
+  const handleSigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64 = evt.target?.result as string;
+      setIsProcessing(true);
+      const success = await onUpdatePrincipalSignature(base64);
+      if (success) alert('স্বাক্ষর আপডেট করা হয়েছে।');
+      setIsProcessing(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDownloadStudents = () => {
@@ -408,7 +442,10 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <td className="px-4 py-3 text-xs">{s.mobile || '-'}</td>
                     <td className="px-4 py-3 text-xs">{s.village || '-'}</td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => { if(confirm(`${s.name} ডিলিট?`)) onDeleteStudent(s.id); }} className="text-red-500 dark:text-red-400"><i className="fas fa-trash"></i></button>
+                      <div className="flex justify-center gap-3">
+                        <button onClick={() => setEditingStudent(s)} className="text-indigo-600 dark:text-indigo-400 hover:scale-110 transition-transform"><i className="fas fa-edit"></i></button>
+                        <button onClick={() => { if(confirm(`${s.name} ডিলিট?`)) onDeleteStudent(s.id); }} className="text-red-500 dark:text-red-400 hover:scale-110 transition-transform"><i className="fas fa-trash"></i></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -489,6 +526,27 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
               <button onClick={handleUpdatePassword} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm">আপডেট</button>
             </div>
           </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
+            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">অধ্যক্ষর স্বাক্ষর</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0 w-48 h-24 bg-gray-50 dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden">
+                {principalSignature ? (
+                  <img src={principalSignature} alt="Principal Signature" className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">স্বাক্ষর নেই</span>
+                )}
+              </div>
+              <div className="flex-grow space-y-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">মার্কশিটে প্রদর্শনের জন্য অধ্যক্ষের স্বাক্ষর আপলোড করুন (PNG/JPG)। ব্যাকগ্রাউন্ড ছাড়া স্বাক্ষর দিলে ভালো দেখাবে।</p>
+                <button onClick={() => sigInputRef.current?.click()} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2">
+                  <i className="fas fa-upload"></i> স্বাক্ষর আপলোড করুন
+                </button>
+                <input type="file" ref={sigInputRef} className="hidden" accept="image/*" onChange={handleSigUpload} />
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
             <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">বিষয় ম্যানেজমেন্ট</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
@@ -509,6 +567,67 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">নোটিশ বোর্ড</h2>
             <textarea placeholder="নোটিশ লিখুন..." className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none mb-4 text-sm border border-transparent focus:border-indigo-500" value={noticeInput} onChange={e => setNoticeInput(e.target.value)} />
             <button onClick={handleAddNotice} className="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold text-sm">পাবলিশ</button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-scale-in">
+            <div className="bg-indigo-600 p-6 flex justify-between items-center text-white">
+              <div className="flex items-center gap-3">
+                <i className="fas fa-user-edit text-xl"></i>
+                <h3 className="font-black text-lg">শিক্ষার্থীর তথ্য সংশোধন</h3>
+              </div>
+              <button onClick={() => setEditingStudent(null)} className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">শিক্ষার্থীর নাম</label>
+                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.name} onChange={e => setEditingStudent({...editingStudent, name: e.target.value})} required />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">রোল নম্বর</label>
+                  <input type="number" className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.roll} onChange={e => setEditingStudent({...editingStudent, roll: e.target.value})} required />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">পিতার নাম</label>
+                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.fatherName} onChange={e => setEditingStudent({...editingStudent, fatherName: e.target.value})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">মাতার নাম</label>
+                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.motherName} onChange={e => setEditingStudent({...editingStudent, motherName: e.target.value})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">মোবাইল নম্বর</label>
+                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.mobile} onChange={e => setEditingStudent({...editingStudent, mobile: e.target.value})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">গ্রাম/ঠিকানা</label>
+                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.village} onChange={e => setEditingStudent({...editingStudent, village: e.target.value})} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">শ্রেণী</label>
+                  <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.studentClass} onChange={e => setEditingStudent({...editingStudent, studentClass: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">শিক্ষাবর্ষ</label>
+                  <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.year} onChange={e => setEditingStudent({...editingStudent, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setEditingStudent(null)} className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-3.5 rounded-2xl font-bold">বাতিল</button>
+                <button type="submit" disabled={isProcessing} className="flex-1 bg-indigo-600 text-white py-3.5 rounded-2xl font-black shadow-xl flex items-center justify-center gap-2">
+                  {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-check-circle"></i>} আপডেট করুন
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

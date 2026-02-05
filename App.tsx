@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [isDataInitialized, setIsDataInitialized] = useState<boolean>(false);
+  const [principalSignature, setPrincipalSignature] = useState<string>('');
   
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('isTeacherAuthenticated') === 'true';
@@ -38,7 +39,7 @@ const App: React.FC = () => {
         supabase.from('results').select('*'),
         supabase.from('subjects').select('*'),
         supabase.from('notices').select('*').order('id', { ascending: false }),
-        supabase.from('app_settings').select('*').eq('key', 'teacher_password').single()
+        supabase.from('app_settings').select('*')
       ]);
 
       if (studentsData) setStudents(studentsData);
@@ -53,7 +54,13 @@ const App: React.FC = () => {
       }
       
       if (noticesData) setNotices(noticesData);
-      if (settingsData) setTeacherPassword(settingsData.value);
+      
+      if (settingsData) {
+        const passSetting = settingsData.find(s => s.key === 'teacher_password');
+        const sigSetting = settingsData.find(s => s.key === 'principal_signature');
+        if (passSetting) setTeacherPassword(passSetting.value);
+        if (sigSetting) setPrincipalSignature(sigSetting.value);
+      }
     } catch (error) {
       console.error('Data fetch error:', error);
     } finally {
@@ -66,7 +73,6 @@ const App: React.FC = () => {
     const savedDarkMode = localStorage.getItem('school_dark_mode');
     if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode) === true);
 
-    // রিয়েল-টাইম নোটিফিকেশন লিসেনার
     if (supabase) {
       const channel = supabase
         .channel('schema-db-changes')
@@ -76,8 +82,6 @@ const App: React.FC = () => {
           (payload) => {
             const newNotice = payload.new as Notice;
             setNotices(prev => [newNotice, ...prev]);
-            
-            // ব্রাউজার নোটিফিকেশন প্রদর্শন
             if ("Notification" in window && Notification.permission === "granted") {
               new Notification("নতুন নোটিশ প্রকাশিত হয়েছে!", {
                 body: newNotice.text.substring(0, 100) + (newNotice.text.length > 100 ? "..." : ""),
@@ -131,6 +135,7 @@ const App: React.FC = () => {
         ) : view === 'TEACHER_DASHBOARD' ? (
           <TeacherPanel 
             students={students} results={results} subjects={subjects} notices={notices}
+            principalSignature={principalSignature}
             onSetSubjectsForClass={async (className, classSubjects) => {
               const { error } = await supabase!.from('subjects').upsert({ class: className, subjects: classSubjects }, { onConflict: 'class' });
               if (!error) { setSubjects(prev => ({ ...prev, [className]: classSubjects })); return true; }
@@ -172,7 +177,6 @@ const App: React.FC = () => {
               return false;
             }}
             onUpdateNotices={async (n) => {
-              // Delete existing notices and insert new ones or just handle per-item
               const { error: delError } = await supabase!.from('notices').delete().neq('id', 'temp-never-exists');
               if (delError) return false;
               const { error } = await supabase!.from('notices').insert(n);
@@ -187,10 +191,18 @@ const App: React.FC = () => {
                 handleLogout();
               }
             }}
+            onUpdatePrincipalSignature={async (sig) => {
+              const { error } = await supabase!.from('app_settings').upsert({ key: 'principal_signature', value: sig });
+              if (!error) {
+                setPrincipalSignature(sig);
+                return true;
+              }
+              return false;
+            }}
             currentPassword={teacherPassword}
           />
         ) : (
-          <StudentPanel students={students} results={results} subjects={subjects} />
+          <StudentPanel students={students} results={results} subjects={subjects} principalSignature={principalSignature} />
         )}
       </main>
 
