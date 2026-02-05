@@ -247,12 +247,13 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
             
             <div className="p-4 md:p-8">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1200px]">
+                <table className="w-full text-left border-collapse min-w-[1400px]">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300 font-black text-[10px] uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-4 border-b dark:border-gray-600">রোল</th>
                       <th className="px-4 py-4 border-b dark:border-gray-600">নাম</th>
-                      {/* বার্ষিক বিষয়ের নম্বর কলামগুলো */}
+                      
+                      {/* বিষয়ের কলামগুলো */}
                       {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="px-3 py-4 border-b dark:border-gray-600 text-center">{s}</th>)}
                       
                       {isAnnualView ? (
@@ -281,9 +282,9 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                           <td className="px-4 py-4 font-black text-indigo-700 dark:text-indigo-400">{s.roll}</td>
                           <td className="px-4 py-4 font-bold text-sm">{s.name}</td>
                           
-                          {/* বার্ষিক পরীক্ষার প্রতিটি বিষয়ের মার্কস */}
+                          {/* প্রতিটি বিষয়ের প্রাপ্ত মার্কস */}
                           {(classSubjectsMap[batchFilter.class] || []).map(sub => (
-                            <td key={sub} className="px-3 py-4 text-center text-xs">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
+                            <td key={sub} className="px-3 py-4 text-center text-xs font-bold">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
                           ))}
 
                           {isAnnualView ? (

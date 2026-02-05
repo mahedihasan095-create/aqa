@@ -205,9 +205,39 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
+  const handlePublishAll = async () => {
+    const filteredResults = results.filter(r => r.class === filter.class && r.year === filter.year && !r.isPublished);
+    if (filteredResults.length === 0) {
+      alert('পাবলিশ করার মতো কোনো নতুন রেজাল্ট পাওয়া যায়নি।');
+      return;
+    }
+    if (!confirm(`${filter.class} শ্রেণীর (${filter.year}) সকল রেজাল্ট একসাথে পাবলিশ করতে চান?`)) return;
+
+    setIsProcessing(true);
+    const resultsToUpdate = filteredResults.map(r => ({ ...r, isPublished: true }));
+    const success = await onSaveResults(resultsToUpdate);
+    if (success) {
+      alert('সকল রেজাল্ট সফলভাবে পাবলিশ করা হয়েছে!');
+    }
+    setIsProcessing(false);
+  };
+
   const filteredStudentsForResults = useMemo(() => {
     return students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
   }, [students, entryConfig.class, entryConfig.year]);
+
+  // Keyboard navigation logic
+  const handleKeyDown = (e: React.KeyboardEvent, studentIdx: number, subIdx: number) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      e.preventDefault();
+      const nextInput = document.getElementById(`input-${studentIdx + 1}-${subIdx}`);
+      if (nextInput) nextInput.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevInput = document.getElementById(`input-${studentIdx - 1}-${subIdx}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -248,20 +278,28 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-gray-700">
-                  {filteredStudentsForResults.map(student => {
+                  {filteredStudentsForResults.map((student, studentIdx) => {
                     const currentMarks = bulkMarks[student.id] || {};
                     const classSubjects = subjects[entryConfig.class] || [];
                     const total = classSubjects.reduce((acc, sub) => acc + parseInt(currentMarks[sub] || '0'), 0);
                     const grade = calculateGrade(total, classSubjects.length);
                     return (
                       <tr key={student.id} className="text-gray-800 dark:text-gray-200">
-                        <td className="p-3"><div className="font-black text-indigo-600 dark:text-indigo-400 text-xs">#{student.roll}</div><div className="text-sm font-bold">{student.name}</div></td>
-                        {classSubjects.map(sub => (
+                        <td className="p-3 min-w-[150px]"><div className="font-black text-indigo-600 dark:text-indigo-400 text-xs">#{student.roll}</div><div className="text-sm font-bold truncate">{student.name}</div></td>
+                        {classSubjects.map((sub, subIdx) => (
                           <td key={sub} className="p-1.5 text-center">
-                            <input type="number" className="w-14 p-1.5 text-center bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg outline-none font-bold text-sm border border-transparent focus:border-indigo-500" value={currentMarks[sub] || ''} placeholder="0" onChange={e => setBulkMarks(prev => ({ ...prev, [student.id]: { ...(prev[student.id] || {}), [sub]: e.target.value } }))} />
+                            <input 
+                              id={`input-${studentIdx}-${subIdx}`}
+                              type="number" 
+                              className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 text-indigo-700 dark:text-indigo-400 rounded-lg outline-none font-black text-sm border-2 border-gray-200 dark:border-gray-600 focus:border-indigo-500 shadow-inner no-spinner" 
+                              value={currentMarks[sub] || ''} 
+                              placeholder="0" 
+                              onChange={e => setBulkMarks(prev => ({ ...prev, [student.id]: { ...(prev[student.id] || {}), [sub]: e.target.value } }))} 
+                              onKeyDown={e => handleKeyDown(e, studentIdx, subIdx)}
+                            />
                           </td>
                         ))}
-                        <td className="p-3 text-center"><div className="font-black text-sm">{total}</div><div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-block ${grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>{grade}</div></td>
+                        <td className="p-3 text-center min-w-[80px]"><div className="font-black text-sm text-gray-900 dark:text-gray-100">{total}</div><div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-block ${grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>{grade}</div></td>
                       </tr>
                     );
                   })}
@@ -382,9 +420,20 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
       {activeSubView === 'MANAGE_RESULTS' && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300">রেজাল্ট ম্যানেজ ও পাবলিশ</h2>
-            <button onClick={handleDownloadResults} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-2 rounded-xl text-xs font-bold border border-indigo-200 dark:border-indigo-800">এক্সেল ডাউনলোড</button>
+            <div className="flex flex-wrap gap-2">
+              <button 
+                onClick={handlePublishAll} 
+                disabled={isProcessing}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md flex items-center gap-2 transition-all"
+              >
+                {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-bullhorn"></i>} সব পাবলিশ করুন
+              </button>
+              <button onClick={handleDownloadResults} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-xl text-xs font-bold border border-indigo-200 dark:border-indigo-800 flex items-center gap-2">
+                <i className="fas fa-file-excel"></i> এক্সেল ডাউনলোড
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mb-6">
             <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold text-sm" value={filter.class} onChange={e => setFilter({...filter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
@@ -410,7 +459,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                       <td className="p-3 font-bold">{s?.name} <span className="text-indigo-600 dark:text-indigo-400 text-xs">#{s?.roll}</span></td>
                       <td className="p-3 text-xs">{res.examName}</td>
                       <td className="p-3 text-center font-black">{res.totalMarks}</td>
-                      <td className="p-3 text-center"><span className={`px-2 py-0.5 rounded text-[10px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>{res.grade}</span></td>
+                      <td className="p-3 text-center"><span className={`px-2 py-0.5 rounded text-[10px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>{res.grade}</span></td>
                       <td className="p-3 text-center">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black ${res.isPublished ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
                           {res.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
