@@ -90,6 +90,22 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
 
   const isAnnualView = (searchType === 'BATCH' ? batchFilter.exam : indivSearch.exam) === 'বার্ষিক পরীক্ষা';
 
+  const handleBatchPrint = () => {
+    // Add landscape class to body temporarily for batch print
+    const style = document.createElement('style');
+    style.id = 'landscape-print-style';
+    style.innerHTML = '@media print { @page { size: A4 landscape; margin: 5mm; } }';
+    document.head.appendChild(style);
+    
+    window.print();
+    
+    // Remove the style after a small delay
+    setTimeout(() => {
+      const el = document.getElementById('landscape-print-style');
+      if (el) el.remove();
+    }, 1000);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 no-print">
@@ -237,8 +253,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
             <div className="p-8 bg-indigo-50 dark:bg-indigo-900/30 no-print border-b dark:border-gray-700">
               <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শ্রেণী ভিত্তিক মেধা তালিকা</h2>
-                <button onClick={() => window.print()} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2">
-                  <i className="fas fa-print"></i> প্রিন্ট তালিকা
+                <button onClick={handleBatchPrint} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2">
+                  <i className="fas fa-print"></i> ল্যান্ডস্কেপ প্রিন্ট
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -248,33 +264,33 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
               </div>
             </div>
             
-            <div className="p-4 md:p-8">
+            <div className="p-2 md:p-4">
               <div className="print-header hidden mb-6 text-center">
                 <h1 className="text-2xl font-black">আনওয়ারুল কুরআন একাডেমী</h1>
                 <h2 className="text-xl font-bold">{batchFilter.class} - {batchFilter.exam} ({batchFilter.year})</h2>
-                <h3 className="text-lg">শ্রেণী ভিত্তিক মেধা তালিকা</h3>
+                <h3 className="text-lg">শ্রেণী ভিত্তিক মেধা তালিকা (সংক্ষিপ্ত সংস্করণ)</h3>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1200px] print-table">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300 font-black text-[10px] uppercase tracking-wider">
+                <table className="w-full text-left border-collapse print-table">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300 font-black text-[9px] uppercase tracking-tighter">
                     <tr>
-                      <th className="px-4 py-4 border-b dark:border-gray-600">রোল</th>
-                      <th className="px-4 py-4 border-b dark:border-gray-600">নাম</th>
+                      <th className="px-2 py-2 border-b dark:border-gray-600">রোল</th>
+                      <th className="px-2 py-2 border-b dark:border-gray-600 min-w-[100px]">নাম</th>
                       
-                      {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="px-3 py-4 border-b dark:border-gray-600 text-center">{s}</th>)}
+                      {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="px-1 py-2 border-b dark:border-gray-600 text-center">{s}</th>)}
                       
                       {isAnnualView ? (
                         <>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">১ম</th>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">২য়</th>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">বার্ষিক</th>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black bg-gray-100 dark:bg-gray-700">গড়</th>
+                          <th className="px-2 py-2 border-b dark:border-gray-600 text-center font-black">১ম</th>
+                          <th className="px-2 py-2 border-b dark:border-gray-600 text-center font-black">২য়</th>
+                          <th className="px-2 py-2 border-b dark:border-gray-600 text-center font-black">বার্ষিক</th>
+                          <th className="px-2 py-2 border-b dark:border-gray-600 text-center font-black bg-gray-100 dark:bg-gray-700">গড়</th>
                         </>
                       ) : (
-                        <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">মোট</th>
+                        <th className="px-2 py-2 border-b dark:border-gray-600 text-center font-black">মোট</th>
                       )}
-                      <th className="px-4 py-4 border-b dark:border-gray-600 text-center">গ্রেড</th>
-                      <th className="px-4 py-4 border-b dark:border-gray-600 text-center">স্থান</th>
+                      <th className="px-2 py-2 border-b dark:border-gray-600 text-center">গ্রেড</th>
+                      <th className="px-2 py-2 border-b dark:border-gray-600 text-center">স্থান</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-gray-700 text-gray-800 dark:text-gray-200">
@@ -293,30 +309,30 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                       
                       return (
                         <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
-                          <td className="px-4 py-4 font-black text-indigo-700 dark:text-indigo-400">{s.roll}</td>
-                          <td className="px-4 py-4 font-bold text-sm">{s.name}</td>
+                          <td className="px-2 py-1.5 font-black text-indigo-700 dark:text-indigo-400 text-xs">{s.roll}</td>
+                          <td className="px-2 py-1.5 font-bold text-[11px]">{s.name}</td>
                           
                           {(classSubjectsMap[batchFilter.class] || []).map(sub => (
-                            <td key={sub} className="px-3 py-4 text-center text-xs font-bold">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
+                            <td key={sub} className="px-1 py-1.5 text-center text-[10px] font-bold">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
                           ))}
 
                           {isAnnualView ? (
                             <>
-                              <td className="px-4 py-4 text-center font-bold">{annualStats?.term1}</td>
-                              <td className="px-4 py-4 text-center font-bold">{annualStats?.term2}</td>
-                              <td className="px-4 py-4 text-center font-black">{annualStats?.annual}</td>
-                              <td className="px-4 py-4 text-center font-black text-lg text-indigo-700 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10">{annualStats?.average}</td>
+                              <td className="px-1 py-1.5 text-center text-xs font-bold">{annualStats?.term1}</td>
+                              <td className="px-1 py-1.5 text-center text-xs font-bold">{annualStats?.term2}</td>
+                              <td className="px-1 py-1.5 text-center text-xs font-black">{annualStats?.annual}</td>
+                              <td className="px-1 py-1.5 text-center font-black text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10">{annualStats?.average}</td>
                             </>
                           ) : (
-                            <td className="px-4 py-4 text-center font-black text-indigo-700 dark:text-indigo-300">{res.totalMarks}</td>
+                            <td className="px-1 py-1.5 text-center font-black text-xs text-indigo-700 dark:text-indigo-300">{res.totalMarks}</td>
                           )}
                           
-                          <td className="px-4 py-4 text-center font-bold">
-                            <span className={`px-2 py-1 rounded-md text-[10px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                          <td className="px-1 py-1.5 text-center font-bold">
+                            <span className={`px-1 rounded text-[9px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
                               {res.grade}
                             </span>
                           </td>
-                          <td className="px-4 py-4 text-center font-black text-amber-600">#{getRank(s.id)}</td>
+                          <td className="px-1 py-1.5 text-center font-black text-amber-600 text-xs">#{getRank(s.id)}</td>
                         </tr>
                       )
                     }).filter(r => r !== null)}
