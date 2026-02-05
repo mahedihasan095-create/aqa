@@ -113,7 +113,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
           {searched && foundStudent && (
             getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
               <div className="bg-white dark:bg-gray-800 p-6 md:p-10 rounded-[40px] shadow-2xl border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
-                 <div className="text-center mb-8 border-b-2 border-indigo-50 dark:border-indigo-900 pb-6">
+                 <div className="text-center mb-8 border-b-2 border-indigo-50 dark:border-indigo-900 pb-6 print-header">
                    <h1 className="text-3xl md:text-5xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
                    <div className="inline-block mt-3 bg-indigo-600 text-white px-8 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest">{indivSearch.exam} মূল্যায়নপত্র - {indivSearch.year}</div>
                  </div>
@@ -134,7 +134,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  </div>
                  
                  <div className="overflow-x-auto mb-6">
-                   <table className="w-full text-left border-collapse border border-gray-200 dark:border-gray-700">
+                   <table className="w-full text-left border-collapse border border-gray-200 dark:border-gray-700 print-table">
                      <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                        <tr>
                          <th className="px-4 py-3 border border-gray-200 dark:border-gray-700">বিষয়ের নাম</th>
@@ -145,7 +145,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                      </thead>
                      <tbody className="text-gray-800 dark:text-gray-200">
                        {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks.map(m => (
-                         <tr key={m.subjectName} className="hover:bg-gray-50 dark:hover:bg-gray-700/20">
+                         <tr key={m.subjectName}>
                            <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 font-bold">{m.subjectName}</td>
                            <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center">১০০</td>
                            <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center font-black text-indigo-700 dark:text-indigo-400">{m.marks}</td>
@@ -201,7 +201,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                    </div>
                  </div>
 
-                 <div className="mt-16 flex justify-between items-end border-t-2 border-dashed dark:border-gray-700 pt-10 px-4">
+                 <div className="mt-16 flex justify-between items-end border-t-2 border-dashed dark:border-gray-700 pt-10 px-4 print-footer">
                    <div className="text-center">
                      <div className="w-32 border-b border-gray-400 dark:border-gray-500 mb-2 mx-auto"></div>
                      <p className="text-xs font-bold text-gray-500">অভিভাবক</p>
@@ -233,10 +233,13 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
 
       {searchType === 'BATCH' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-[40px] shadow-xl border dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-[40px] shadow-xl border dark:border-gray-700 overflow-hidden print-area">
             <div className="p-8 bg-indigo-50 dark:bg-indigo-900/30 no-print border-b dark:border-gray-700">
               <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শ্রেণী ভিত্তিক মেধা তালিকা</h2>
+                <button onClick={() => window.print()} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2">
+                  <i className="fas fa-print"></i> প্রিন্ট তালিকা
+                </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">শ্রেণী</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" value={batchFilter.class} onChange={e => setBatchFilter({...batchFilter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
@@ -246,32 +249,43 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
             </div>
             
             <div className="p-4 md:p-8">
+              <div className="print-header hidden mb-6 text-center">
+                <h1 className="text-2xl font-black">আনওয়ারুল কুরআন একাডেমী</h1>
+                <h2 className="text-xl font-bold">{batchFilter.class} - {batchFilter.exam} ({batchFilter.year})</h2>
+                <h3 className="text-lg">শ্রেণী ভিত্তিক মেধা তালিকা</h3>
+              </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1400px]">
+                <table className="w-full text-left border-collapse min-w-[1200px] print-table">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300 font-black text-[10px] uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-4 border-b dark:border-gray-600">রোল</th>
                       <th className="px-4 py-4 border-b dark:border-gray-600">নাম</th>
                       
-                      {/* বিষয়ের কলামগুলো */}
                       {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="px-3 py-4 border-b dark:border-gray-600 text-center">{s}</th>)}
                       
                       {isAnnualView ? (
                         <>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center bg-indigo-50/50 dark:bg-indigo-900/20 font-black">১ম সাময়িক</th>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center bg-blue-50/50 dark:bg-blue-900/20 font-black">২য় সাময়িক</th>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center bg-purple-50/50 dark:bg-purple-900/20 font-black">বার্ষিক মোট</th>
-                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center bg-green-50 dark:bg-green-900/30 font-black text-indigo-600">গড় (৩ পরীক্ষা)</th>
+                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">১ম</th>
+                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">২য়</th>
+                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">বার্ষিক</th>
+                          <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black bg-gray-100 dark:bg-gray-700">গড়</th>
                         </>
                       ) : (
-                        <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">মোট নম্বর</th>
+                        <th className="px-4 py-4 border-b dark:border-gray-600 text-center font-black">মোট</th>
                       )}
                       <th className="px-4 py-4 border-b dark:border-gray-600 text-center">গ্রেড</th>
-                      <th className="px-4 py-4 border-b dark:border-gray-600 text-center">অবস্থান</th>
+                      <th className="px-4 py-4 border-b dark:border-gray-600 text-center">স্থান</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-gray-700 text-gray-800 dark:text-gray-200">
-                    {students.filter(s => s.studentClass === batchFilter.class && s.year === batchFilter.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll)).map(s => {
+                    {students.filter(s => s.studentClass === batchFilter.class && s.year === batchFilter.year).sort((a,b) => {
+                      const resA = getSpecificResult(a.id, batchFilter.class, batchFilter.year, batchFilter.exam);
+                      const resB = getSpecificResult(b.id, batchFilter.class, batchFilter.year, batchFilter.exam);
+                      if (isAnnualView) {
+                        return parseFloat(calculateGrandAverage(b.id, batchFilter.class, batchFilter.year).average) - parseFloat(calculateGrandAverage(a.id, batchFilter.class, batchFilter.year).average);
+                      }
+                      return (resB?.totalMarks || 0) - (resA?.totalMarks || 0);
+                    }).map(s => {
                       const res = getSpecificResult(s.id, batchFilter.class, batchFilter.year, batchFilter.exam);
                       if (!res) return null;
                       
@@ -282,17 +296,16 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                           <td className="px-4 py-4 font-black text-indigo-700 dark:text-indigo-400">{s.roll}</td>
                           <td className="px-4 py-4 font-bold text-sm">{s.name}</td>
                           
-                          {/* প্রতিটি বিষয়ের প্রাপ্ত মার্কস */}
                           {(classSubjectsMap[batchFilter.class] || []).map(sub => (
                             <td key={sub} className="px-3 py-4 text-center text-xs font-bold">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
                           ))}
 
                           {isAnnualView ? (
                             <>
-                              <td className="px-4 py-4 text-center font-bold text-indigo-600/80">{annualStats?.term1}</td>
-                              <td className="px-4 py-4 text-center font-bold text-blue-600/80">{annualStats?.term2}</td>
-                              <td className="px-4 py-4 text-center font-black text-purple-600">{annualStats?.annual}</td>
-                              <td className="px-4 py-4 text-center font-black text-lg text-green-700 dark:text-green-400 bg-green-50/30 dark:bg-green-900/10">{annualStats?.average}</td>
+                              <td className="px-4 py-4 text-center font-bold">{annualStats?.term1}</td>
+                              <td className="px-4 py-4 text-center font-bold">{annualStats?.term2}</td>
+                              <td className="px-4 py-4 text-center font-black">{annualStats?.annual}</td>
+                              <td className="px-4 py-4 text-center font-black text-lg text-indigo-700 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10">{annualStats?.average}</td>
                             </>
                           ) : (
                             <td className="px-4 py-4 text-center font-black text-indigo-700 dark:text-indigo-300">{res.totalMarks}</td>
