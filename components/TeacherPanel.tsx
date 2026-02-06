@@ -35,12 +35,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('STUDENT_LIST');
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultExcelRef = useRef<HTMLInputElement>(null);
   const sigInputRef = useRef<HTMLInputElement>(null);
   
   const [newPass, setNewPass] = useState('');
   const [subjectClass, setSubjectClass] = useState('প্রথম');
   const [subjectInput, setSubjectInput] = useState('');
   const [noticeInput, setNoticeInput] = useState('');
+  const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
 
   const [filter, setFilter] = useState({ class: 'প্রথম', year: '২০২৬' });
   const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
@@ -123,6 +125,76 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     XLSX.writeFile(wb, "Student_Enroll_Sample.xlsx");
   };
 
+  const handleDownloadResultSample = () => {
+    const classSubjects = subjects[entryConfig.class] || [];
+    if (classSubjects.length === 0) {
+      alert('এই ক্লাসের জন্য কোনো বিষয় সেট করা নেই। সেটিংস থেকে বিষয় সেট করুন।');
+      return;
+    }
+
+    const filteredStudents = students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll));
+    
+    const sampleData = filteredStudents.map(s => {
+      const row: any = { 'রোল': s.roll, 'নাম': s.name };
+      classSubjects.forEach(sub => {
+        row[sub] = ''; // Empty for data entry
+      });
+      return row;
+    });
+
+    if (sampleData.length === 0) {
+      // If no students, just headers
+      const row: any = { 'রোল': '', 'নাম': '' };
+      classSubjects.forEach(sub => row[sub] = '');
+      sampleData.push(row);
+    }
+
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Result_Entry");
+    XLSX.writeFile(wb, `Result_Sample_${entryConfig.class}_${entryConfig.exam}.xlsx`);
+  };
+
+  const handleResultFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data: any[] = XLSX.utils.sheet_to_json(ws);
+        
+        const newBulkMarks = { ...bulkMarks };
+        const classSubjects = subjects[entryConfig.class] || [];
+        
+        data.forEach(row => {
+          const roll = (row['রোল'] || row['Roll'] || '').toString();
+          const student = students.find(s => s.roll.toString() === roll && s.studentClass === entryConfig.class && s.year === entryConfig.year);
+          
+          if (student) {
+            const studentMarks: Record<string, string> = newBulkMarks[student.id] || {};
+            classSubjects.forEach(sub => {
+              if (row[sub] !== undefined) {
+                studentMarks[sub] = row[sub].toString();
+              }
+            });
+            newBulkMarks[student.id] = studentMarks;
+          }
+        });
+
+        setBulkMarks(newBulkMarks);
+        alert('এক্সেল ফাইল থেকে নম্বরগুলো সফলভাবে ইমপোর্ট করা হয়েছে। এখন "সংরক্ষণ করুন" বাটনে ক্লিক করুন।');
+      } catch (err) {
+        alert('ফাইলটি প্রসেস করতে সমস্যা হয়েছে। সঠিক ফরম্যাটের ফাইল ব্যবহার করুন।');
+      } finally {
+        if (resultExcelRef.current) resultExcelRef.current.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -196,18 +268,65 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   };
 
   const handleSaveSubjects = async () => {
-    const subjectList = subjectInput.split(',').map(s => s.trim()).filter(s => s !== '');
+    const existing = subjects[subjectClass] || [];
+    const newOnes = subjectInput.split(',').map(s => s.trim()).filter(s => s !== '');
+    if (newOnes.length === 0) return;
+    
+    // Merge without duplicates
+    const merged = Array.from(new Set([...existing, ...newOnes]));
+    
     setIsProcessing(true);
-    const success = await onSetSubjectsForClass(subjectClass, subjectList);
-    if (success) { alert('আপডেট করা হয়েছে।'); setSubjectInput(''); }
+    const success = await onSetSubjectsForClass(subjectClass, merged);
+    if (success) { alert('সংরক্ষণ করা হয়েছে।'); setSubjectInput(''); }
+    setIsProcessing(false);
+  };
+
+  const handleDeleteSubject = async (className: string, subName: string) => {
+    if (!confirm(`আপনি কি নিশ্চিতভাবে "${subName}" বিষয়টিকে মুছে ফেলতে চান?`)) return;
+    
+    const current = subjects[className] || [];
+    const filtered = current.filter(s => s !== subName);
+    
+    setIsProcessing(true);
+    const success = await onSetSubjectsForClass(className, filtered);
+    if (success) alert('বিষয়টি মুছে ফেলা হয়েছে।');
     setIsProcessing(false);
   };
 
   const handleAddNotice = async () => {
     if (!noticeInput.trim()) return;
-    const newNotice = { id: Date.now().toString(), text: noticeInput, date: new Date().toLocaleDateString('bn-BD') };
-    const success = await onUpdateNotices([newNotice, ...notices]);
-    if (success) { alert('নোটিশ প্রকাশিত হয়েছে!'); setNoticeInput(''); }
+    setIsProcessing(true);
+    
+    let updatedNotices;
+    if (editingNoticeId) {
+      updatedNotices = notices.map(n => n.id === editingNoticeId ? { ...n, text: noticeInput } : n);
+    } else {
+      const newNotice = { id: Date.now().toString(), text: noticeInput, date: new Date().toLocaleDateString('bn-BD') };
+      updatedNotices = [newNotice, ...notices];
+    }
+    
+    const success = await onUpdateNotices(updatedNotices);
+    if (success) { 
+      alert(editingNoticeId ? 'নোটিশ আপডেট করা হয়েছে!' : 'নোটিশ প্রকাশিত হয়েছে!'); 
+      setNoticeInput(''); 
+      setEditingNoticeId(null);
+    }
+    setIsProcessing(false);
+  };
+
+  const handleDeleteNotice = async (id: string) => {
+    if (!confirm('আপনি কি এই নোটিশটি মুছে ফেলতে চান?')) return;
+    setIsProcessing(true);
+    const updatedNotices = notices.filter(n => n.id !== id);
+    const success = await onUpdateNotices(updatedNotices);
+    if (success) alert('নোটিশটি মুছে ফেলা হয়েছে।');
+    setIsProcessing(false);
+  };
+
+  const handleEditNotice = (notice: Notice) => {
+    setNoticeInput(notice.text);
+    setEditingNoticeId(notice.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveBulkResults = async () => {
@@ -294,9 +413,21 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {activeSubView === 'RESULT_ENTRY' && (
         <div className="animate-fade-in space-y-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300 mb-4 flex items-center gap-2">
-              <i className="fas fa-edit"></i> রেজাল্ট এন্ট্রি ও এডিট
-            </h2>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
+                <i className="fas fa-edit"></i> রেজাল্ট এন্ট্রি ও এডিট
+              </h2>
+              <div className="flex gap-2">
+                <button onClick={handleDownloadResultSample} className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                  <i className="fas fa-file-download"></i> নমুনা ফাইল
+                </button>
+                <button onClick={() => resultExcelRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-3 py-2 rounded-xl text-xs font-bold border border-green-200 dark:border-green-800 flex items-center gap-1">
+                  <i className="fas fa-file-excel"></i> এক্সেল ইমপোর্ট
+                </button>
+                <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" onChange={handleResultFileUpload} />
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
               <select className="p-2.5 rounded-xl border-none outline-none font-bold text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value={entryConfig.class} onChange={e => setEntryConfig({...entryConfig, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
               <select className="p-2.5 rounded-xl border-none outline-none font-bold text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value={entryConfig.year} onChange={e => setEntryConfig({...entryConfig, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
@@ -551,22 +682,93 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">বিষয় ম্যানেজমেন্ট</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
               <select className="p-2.5 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl text-sm" value={subjectClass} onChange={e => setSubjectClass(e.target.value)}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-              <input placeholder="বিষয় (কমা দিয়ে)" className="md:col-span-2 p-2.5 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl text-sm border border-transparent focus:border-indigo-500" value={subjectInput} onChange={e => setSubjectInput(e.target.value)} />
-              <button onClick={handleSaveSubjects} className="bg-green-600 text-white p-2.5 rounded-xl font-bold text-sm">সংরক্ষণ</button>
+              <input placeholder="নতুন বিষয়ের নাম (একাধিক হলে কমা দিন)" className="md:col-span-2 p-2.5 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl text-sm border border-transparent focus:border-indigo-500" value={subjectInput} onChange={e => setSubjectInput(e.target.value)} />
+              <button onClick={handleSaveSubjects} className="bg-green-600 text-white p-2.5 rounded-xl font-bold text-sm">যোগ করুন</button>
             </div>
-            <div className="bg-indigo-50 dark:bg-indigo-900/10 p-3 rounded-xl flex flex-wrap gap-2">
-              {(subjects[subjectClass] || []).map(s => <span key={s} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full text-[10px] font-bold border dark:border-gray-600">{s}</span>)}
+            
+            <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl">
+              <p className="text-[10px] font-black text-indigo-400 uppercase mb-3 tracking-widest">{subjectClass} শ্রেণীর বর্তমান বিষয়সমূহ:</p>
+              <div className="flex flex-wrap gap-2">
+                {(subjects[subjectClass] || []).length > 0 ? (subjects[subjectClass] || []).map(s => (
+                  <div key={s} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-3 py-1.5 rounded-full text-xs font-bold border dark:border-gray-600 flex items-center gap-2 group hover:border-indigo-500 transition-colors shadow-sm">
+                    <span className="cursor-pointer hover:text-indigo-600" onClick={() => setSubjectInput(s)} title="এডিট করতে ক্লিক করুন">{s}</span>
+                    <button onClick={() => handleDeleteSubject(subjectClass, s)} className="text-red-400 hover:text-red-600 transition-colors"><i className="fas fa-times-circle"></i></button>
+                  </div>
+                )) : (
+                  <span className="text-xs text-gray-400 italic">কোন বিষয় যোগ করা হয়নি</span>
+                )}
+              </div>
+              <p className="mt-3 text-[9px] text-gray-400 font-bold italic">* বিষয়ের নামে ক্লিক করলে ইনপুট বক্সে চলে আসবে।</p>
             </div>
           </div>
         </div>
       )}
 
       {activeSubView === 'NOTICES' && (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">নোটিশ বোর্ড</h2>
-            <textarea placeholder="নোটিশ লিখুন..." className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none mb-4 text-sm border border-transparent focus:border-indigo-500" value={noticeInput} onChange={e => setNoticeInput(e.target.value)} />
-            <button onClick={handleAddNotice} className="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold text-sm">পাবলিশ</button>
+            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <i className="fas fa-bullhorn text-amber-500"></i> {editingNoticeId ? 'নোটিশ সংশোধন' : 'নতুন নোটিশ বোর্ড'}
+            </h2>
+            <textarea 
+              placeholder="নোটিশের লেখাটি এখানে লিখুন..." 
+              className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none mb-4 text-sm border-2 border-transparent focus:border-indigo-500 transition-all shadow-inner" 
+              value={noticeInput} 
+              onChange={e => setNoticeInput(e.target.value)} 
+            />
+            <div className="flex gap-2">
+              <button 
+                onClick={handleAddNotice} 
+                disabled={isProcessing}
+                className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2"
+              >
+                {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-paper-plane"></i>}
+                {editingNoticeId ? 'আপডেট করুন' : 'পাবলিশ করুন'}
+              </button>
+              {editingNoticeId && (
+                <button 
+                  onClick={() => { setEditingNoticeId(null); setNoticeInput(''); }} 
+                  className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-6 py-3 rounded-xl font-bold text-sm"
+                >
+                  বাতিল
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
+            <h3 className="text-lg font-black mb-6 text-gray-900 dark:text-gray-100">প্রকাশিত নোটিশসমূহ ({notices.length})</h3>
+            <div className="space-y-4">
+              {notices.length > 0 ? notices.map(notice => (
+                <div key={notice.id} className="p-5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border dark:border-gray-600 group transition-all">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{notice.date}</span>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleEditNotice(notice)} 
+                        className="text-indigo-600 dark:text-indigo-400 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                        title="এডিট"
+                      >
+                        <i className="fas fa-edit text-xs"></i>
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteNotice(notice.id)} 
+                        className="text-red-500 dark:text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        title="ডিলিট"
+                      >
+                        <i className="fas fa-trash-alt text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{notice.text}</p>
+                </div>
+              )) : (
+                <div className="text-center py-10 text-gray-400">
+                  <i className="fas fa-inbox text-4xl mb-3 block opacity-20"></i>
+                  <p className="text-sm font-bold">এখনো কোনো নোটিশ নেই</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
