@@ -25,15 +25,24 @@ const App: React.FC = () => {
   const [loginError, setLoginError] = useState<boolean>(false);
   const [teacherPassword, setTeacherPassword] = useState<string>('admin123');
 
+  const handleSupabaseError = (error: any, action: string) => {
+    console.error(`Supabase Error (${action}):`, error);
+    if (error.code === '42501') {
+      alert(`Error: পারমিশন ডিনাইড (RLS)! \nদয়া করে সুপাবেস ড্যাশবোর্ডে গিয়ে এই টেবিলের RLS বন্ধ করুন অথবা পলিসি সেট করুন।`);
+    } else {
+      alert(`Error ${action}: ${error.message || 'Unknown error occurred'}`);
+    }
+  };
+
   const fetchAllData = async () => {
     if (!supabase) return;
     try {
       const [
-        { data: studentsData },
-        { data: resultsData },
-        { data: subjectsData },
-        { data: noticesData },
-        { data: settingsData }
+        { data: studentsData, error: sErr },
+        { data: resultsData, error: rErr },
+        { data: subjectsData, error: subErr },
+        { data: noticesData, error: nErr },
+        { data: settingsData, error: setErr }
       ] = await Promise.all([
         supabase.from('students').select('*'),
         supabase.from('results').select('*'),
@@ -42,6 +51,9 @@ const App: React.FC = () => {
         supabase.from('app_settings').select('*')
       ]);
 
+      if (sErr) handleSupabaseError(sErr, 'Fetching Students');
+      if (rErr) handleSupabaseError(rErr, 'Fetching Results');
+      
       if (studentsData) setStudents(studentsData);
       if (resultsData) setResults(resultsData);
       
@@ -82,12 +94,6 @@ const App: React.FC = () => {
           (payload) => {
             const newNotice = payload.new as Notice;
             setNotices(prev => [newNotice, ...prev]);
-            if ("Notification" in window && Notification.permission === "granted") {
-              new Notification("নতুন নোটিশ প্রকাশিত হয়েছে!", {
-                body: newNotice.text.substring(0, 100) + (newNotice.text.length > 100 ? "..." : ""),
-                icon: "/favicon.ico"
-              });
-            }
           }
         )
         .subscribe();
@@ -139,48 +145,58 @@ const App: React.FC = () => {
             onSetSubjectsForClass={async (className, classSubjects) => {
               const { error } = await supabase!.from('subjects').upsert({ class: className, subjects: classSubjects }, { onConflict: 'class' });
               if (!error) { setSubjects(prev => ({ ...prev, [className]: classSubjects })); return true; }
+              handleSupabaseError(error, 'Updating Subjects');
               return false;
             }}
             onAddStudent={async (s) => {
               const { error } = await supabase!.from('students').insert(s);
               if (!error) { setStudents(prev => [...prev, s]); return true; }
+              handleSupabaseError(error, 'Adding Student');
               return false;
             }}
             onAddStudents={async (list) => {
               const { error } = await supabase!.from('students').insert(list);
               if (!error) { setStudents(prev => [...prev, ...list]); return true; }
+              handleSupabaseError(error, 'Importing Students');
               return false;
             }}
             onUpdateStudent={async (s) => {
               const { error } = await supabase!.from('students').update(s).eq('id', s.id);
               if (!error) { setStudents(prev => prev.map(item => item.id === s.id ? s : item)); return true; }
+              handleSupabaseError(error, 'Updating Student');
               return false;
             }}
             onDeleteStudent={async (id) => {
               const { error } = await supabase!.from('students').delete().eq('id', id);
               if (!error) { setStudents(prev => prev.filter(s => s.id !== id)); return true; }
+              handleSupabaseError(error, 'Deleting Student');
               return false;
             }}
             onSaveResult={async (res) => {
               const { error } = await supabase!.from('results').upsert(res);
               if (!error) { setResults(prev => [...prev.filter(r => r.id !== res.id), res]); return true; }
+              handleSupabaseError(error, 'Saving Result');
               return false;
             }}
             onSaveResults={async (list) => {
               const { error } = await supabase!.from('results').upsert(list);
               if (!error) { fetchAllData(); return true; }
+              handleSupabaseError(error, 'Saving Results Bulk');
               return false;
             }}
             onDeleteResult={async (id) => {
               const { error } = await supabase!.from('results').delete().eq('id', id);
               if (!error) { setResults(prev => prev.filter(r => r.id !== id)); return true; }
+              handleSupabaseError(error, 'Deleting Result');
               return false;
             }}
             onUpdateNotices={async (n) => {
-              const { error: delError } = await supabase!.from('notices').delete().neq('id', 'temp-never-exists');
-              if (delError) return false;
+              // Delete all and insert new set for simplicity in management
+              const { error: delError } = await supabase!.from('notices').delete().neq('id', '000');
+              if (delError) { handleSupabaseError(delError, 'Notice Sync'); return false; }
               const { error } = await supabase!.from('notices').insert(n);
               if (!error) { setNotices(n); return true; }
+              handleSupabaseError(error, 'Updating Notices');
               return false;
             }}
             onUpdatePassword={async (p) => {
@@ -189,6 +205,8 @@ const App: React.FC = () => {
                 setTeacherPassword(p);
                 alert('পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে। পুনরায় লগইন করুন।');
                 handleLogout();
+              } else {
+                handleSupabaseError(error, 'Password Change');
               }
             }}
             onUpdatePrincipalSignature={async (sig) => {
@@ -197,6 +215,7 @@ const App: React.FC = () => {
                 setPrincipalSignature(sig);
                 return true;
               }
+              handleSupabaseError(error, 'Signature Upload');
               return false;
             }}
             currentPassword={teacherPassword}
