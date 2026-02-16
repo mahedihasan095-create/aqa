@@ -7,14 +7,57 @@ interface StudentPanelProps {
   results: Result[];
   subjects: Record<string, string[]>;
   principalSignature?: string;
+  logo?: string;
 }
 
 const CLASSES = ['প্লে', 'নার্সারী', 'প্রথম', 'দ্বিতীয়', 'তৃতীয়', 'চতুর্থ', 'পঞ্চম'];
 const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '২০৩০'];
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
-const SCHOOL_LOGO = "https://vwmqaizaktmmtrijaqfb.supabase.co/storage/v1/object/public/assets/logo.png";
 
-const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects: classSubjectsMap, principalSignature }) => {
+const SchoolLogo = ({ size = "w-24 h-24", logo }: { size?: string, logo?: string }) => (
+  <div className={`${size} flex items-center justify-center`}>
+    {logo ? (
+      <img src={logo} alt="School Logo" className="w-full h-full object-contain" />
+    ) : (
+      <svg viewBox="0 0 200 200" className="w-full h-full">
+        <circle cx="100" cy="100" r="98" fill="none" stroke="#ed1c24" strokeWidth="2"/>
+        <circle cx="100" cy="100" r="94" fill="none" stroke="#000" strokeWidth="1"/>
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#ed1c24" strokeWidth="1"/>
+        
+        <path id="curveTopLarge" d="M 30,100 A 70,70 0 1,1 170,100" fill="none" />
+        <text className="text-[18px] font-bold fill-[#2e3192]">
+          <textPath href="#curveTopLarge" startOffset="50%" textAnchor="middle">
+            আনওয়ারুল কুরআন একাডেমী
+          </textPath>
+        </text>
+
+        <path id="curveBottomLarge" d="M 30,100 A 70,70 0 0,0 170,100" fill="none" />
+        <text className="text-[10px] font-bold fill-black">
+          <textPath href="#curveBottomLarge" startOffset="50%" textAnchor="middle">
+            কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর
+          </textPath>
+        </text>
+
+        <circle cx="100" cy="70" r="25" fill="#ed1c24" />
+        <g transform="translate(100,70)">
+          {[...Array(30)].map((_, i) => (
+            <line key={i} x1="0" y1="0" x2="0" y2="-40" stroke="#ed1c24" strokeWidth="0.5" transform={`rotate(${i * 12})`} />
+          ))}
+        </g>
+        
+        <g transform="translate(60,75)">
+          <rect x="0" y="0" width="80" height="60" fill="white" stroke="black" strokeWidth="2" />
+          <line x1="40" y1="0" x2="40" y2="60" stroke="black" strokeWidth="2" />
+          <path d="M 5,10 Q 20,5 35,10 M 5,20 Q 20,15 35,20 M 5,30 Q 20,25 35,30 M 5,40 Q 20,35 35,40 M 5,50 Q 20,45 35,50" fill="none" stroke="gray" strokeWidth="1" />
+          <path d="M 45,10 Q 60,5 75,10 M 45,20 Q 60,15 75,20 M 45,30 Q 60,25 75,30 M 45,40 Q 60,35 75,40 M 45,50 Q 60,45 75,50" fill="none" stroke="gray" strokeWidth="1" />
+        </g>
+        <path d="M 60,135 L 100,155 L 140,135 L 100,145 Z" fill="black" />
+      </svg>
+    )}
+  </div>
+);
+
+const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects: classSubjectsMap, principalSignature, logo }) => {
   const [searchType, setSearchType] = useState<'BATCH' | 'INDIVIDUAL'>('INDIVIDUAL');
   const [batchFilter, setBatchFilter] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
   const [indivSearch, setIndivSearch] = useState({ roll: '', class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
@@ -117,7 +160,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
               <div className="bg-white dark:bg-gray-800 p-6 md:p-10 rounded-[40px] shadow-2xl border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
                  <div className="text-center mb-8 border-b-2 border-indigo-50 dark:border-indigo-900 pb-6 print-header">
                    <div className="flex flex-col items-center justify-center mb-4">
-                     <img src={SCHOOL_LOGO} alt="School Logo" className="w-24 h-24 mb-2 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                     <SchoolLogo size="w-24 h-24 mb-2" logo={logo} />
                      <h1 className="text-3xl md:text-5xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
                    </div>
                    <div className="inline-block mt-3 bg-indigo-600 text-white px-8 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest">{indivSearch.exam} মূল্যায়নপত্র - {indivSearch.year}</div>
@@ -260,7 +303,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
             
             <div className="p-2 md:p-3">
               <div className="print-header hidden mb-4 text-center">
-                <img src={SCHOOL_LOGO} alt="School Logo" className="w-16 h-16 mx-auto mb-2 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                <SchoolLogo size="w-16 h-16 mx-auto mb-2" logo={logo} />
                 <h1 className="text-xl font-black">আনওয়ারুল কুরআন একাডেমী</h1>
                 <h2 className="text-lg font-bold">{batchFilter.class} - {batchFilter.exam} ({batchFilter.year})</h2>
                 <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500">শ্রেণী ভিত্তিক মেধা তালিকা</h3>

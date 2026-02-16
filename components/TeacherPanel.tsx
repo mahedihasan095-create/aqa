@@ -9,6 +9,7 @@ interface TeacherPanelProps {
   subjects: Record<string, string[]>;
   notices: Notice[];
   principalSignature?: string;
+  schoolLogo?: string;
   onSetSubjectsForClass: (className: string, classSubjects: string[]) => Promise<boolean>;
   onAddStudent: (s: Student) => Promise<boolean>;
   onAddStudents?: (list: Student[]) => Promise<boolean>;
@@ -20,6 +21,7 @@ interface TeacherPanelProps {
   onUpdateNotices: (n: Notice[]) => Promise<boolean>;
   onUpdatePassword: (newPass: string) => void;
   onUpdatePrincipalSignature: (signatureBase64: string) => Promise<boolean>;
+  onUpdateSchoolLogo: (logoBase64: string) => Promise<boolean>;
   currentPassword: string;
 }
 
@@ -28,15 +30,16 @@ const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
-  students, results, subjects, notices, principalSignature, onSetSubjectsForClass, onAddStudent, onAddStudents,
+  students, results, subjects, notices, principalSignature, schoolLogo, onSetSubjectsForClass, onAddStudent, onAddStudents,
   onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
-  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, currentPassword 
+  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, currentPassword 
 }) => {
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('STUDENT_LIST');
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultExcelRef = useRef<HTMLInputElement>(null);
   const sigInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   
   const [newPass, setNewPass] = useState('');
   const [subjectClass, setSubjectClass] = useState('প্রথম');
@@ -143,7 +146,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     });
 
     if (sampleData.length === 0) {
-      // If no students, just headers
       const row: any = { 'রোল': '', 'নাম': '' };
       classSubjects.forEach(sub => row[sub] = '');
       sampleData.push(row);
@@ -242,6 +244,20 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64 = evt.target?.result as string;
+      setIsProcessing(true);
+      const success = await onUpdateSchoolLogo(base64);
+      if (success) alert('স্কুল লোগো আপডেট করা হয়েছে।');
+      setIsProcessing(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDownloadStudents = () => {
     const filtered = students.filter(s => s.studentClass === filter.class && s.year === filter.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll));
     const ws = XLSX.utils.json_to_sheet(filtered.map(s => ({ 'রোল': s.roll, 'নাম': s.name, 'পিতার নাম': s.fatherName, 'মাতার নাম': s.motherName, 'মোবাইল': s.mobile, 'শ্রেণী': s.studentClass, 'গ্রাম': s.village, 'সাল': s.year })));
@@ -272,7 +288,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const newOnes = subjectInput.split(',').map(s => s.trim()).filter(s => s !== '');
     if (newOnes.length === 0) return;
     
-    // Merge without duplicates
     const merged = Array.from(new Set([...existing, ...newOnes]));
     
     setIsProcessing(true);
@@ -379,7 +394,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     return students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
   }, [students, entryConfig.class, entryConfig.year]);
 
-  // Keyboard navigation logic
   const handleKeyDown = (e: React.KeyboardEvent, studentIdx: number, subIdx: number) => {
     if (e.key === 'ArrowDown' || e.key === 'Enter') {
       e.preventDefault();
@@ -394,7 +408,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Navigation Tabs */}
       <div className="flex flex-wrap gap-2 no-print bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm border dark:border-gray-700">
         {[
           { id: 'STUDENT_LIST', label: 'ছাত্র তালিকা', icon: 'fa-users' },
@@ -651,6 +664,34 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {activeSubView === 'SETTINGS' && (
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
+            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">স্কুল লোগো পরিবর্তন</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0 w-32 h-32 bg-gray-50 dark:bg-gray-700 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden">
+                {schoolLogo ? (
+                  <img src={schoolLogo} alt="School Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <div className="text-center p-2">
+                    <i className="fas fa-image text-gray-300 text-2xl mb-1"></i>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">লোগো নেই</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex-grow space-y-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">নেভিগেশন বার এবং মার্কশিটে প্রদর্শনের জন্য স্কুলের লোগো আপলোড করুন। বৃত্তাকার লোগো হলে সব জায়গায় সুন্দর দেখাবে।</p>
+                <div className="flex gap-2">
+                  <button onClick={() => logoInputRef.current?.click()} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2">
+                    <i className="fas fa-camera"></i> লোগো আপলোড করুন
+                  </button>
+                  {schoolLogo && (
+                    <button onClick={() => onUpdateSchoolLogo('')} className="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-bold text-sm">মুছে ফেলুন</button>
+                  )}
+                </div>
+                <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
             <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">পাসওয়ার্ড পরিবর্তন</h2>
             <div className="flex gap-2">
               <input type="password" placeholder="নতুন পাসওয়ার্ড" className="flex-grow p-2.5 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl outline-none text-sm border border-transparent focus:border-indigo-500" value={newPass} onChange={e => setNewPass(e.target.value)} />
@@ -698,7 +739,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                   <span className="text-xs text-gray-400 italic">কোন বিষয় যোগ করা হয়নি</span>
                 )}
               </div>
-              <p className="mt-3 text-[9px] text-gray-400 font-bold italic">* বিষয়ের নামে ক্লিক করলে ইনপুট বক্সে চলে আসবে।</p>
             </div>
           </div>
         </div>

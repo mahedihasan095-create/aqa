@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [isDataInitialized, setIsDataInitialized] = useState<boolean>(false);
   const [principalSignature, setPrincipalSignature] = useState<string>('');
+  const [schoolLogo, setSchoolLogo] = useState<string>('');
   
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('isTeacherAuthenticated') === 'true';
@@ -70,8 +71,10 @@ const App: React.FC = () => {
       if (settingsData) {
         const passSetting = settingsData.find(s => s.key === 'teacher_password');
         const sigSetting = settingsData.find(s => s.key === 'principal_signature');
+        const logoSetting = settingsData.find(s => s.key === 'school_logo');
         if (passSetting) setTeacherPassword(passSetting.value);
         if (sigSetting) setPrincipalSignature(sigSetting.value);
+        if (logoSetting) setSchoolLogo(logoSetting.value);
       }
     } catch (error) {
       console.error('Data fetch error:', error);
@@ -128,6 +131,7 @@ const App: React.FC = () => {
         setDarkMode={setDarkMode}
         isTeacherAuthenticated={isTeacherAuthenticated}
         onLogout={handleLogout}
+        logo={schoolLogo}
       />
       
       <main className="flex-grow container mx-auto px-4 py-8">
@@ -142,6 +146,7 @@ const App: React.FC = () => {
           <TeacherPanel 
             students={students} results={results} subjects={subjects} notices={notices}
             principalSignature={principalSignature}
+            schoolLogo={schoolLogo}
             onSetSubjectsForClass={async (className, classSubjects) => {
               const { error } = await supabase!.from('subjects').upsert({ class: className, subjects: classSubjects }, { onConflict: 'class' });
               if (!error) { setSubjects(prev => ({ ...prev, [className]: classSubjects })); return true; }
@@ -191,7 +196,6 @@ const App: React.FC = () => {
               return false;
             }}
             onUpdateNotices={async (n) => {
-              // Delete all and insert new set for simplicity in management
               const { error: delError } = await supabase!.from('notices').delete().neq('id', '000');
               if (delError) { handleSupabaseError(delError, 'Notice Sync'); return false; }
               const { error } = await supabase!.from('notices').insert(n);
@@ -218,10 +222,19 @@ const App: React.FC = () => {
               handleSupabaseError(error, 'Signature Upload');
               return false;
             }}
+            onUpdateSchoolLogo={async (logoBase64) => {
+              const { error } = await supabase!.from('app_settings').upsert({ key: 'school_logo', value: logoBase64 });
+              if (!error) {
+                setSchoolLogo(logoBase64);
+                return true;
+              }
+              handleSupabaseError(error, 'Logo Update');
+              return false;
+            }}
             currentPassword={teacherPassword}
           />
         ) : (
-          <StudentPanel students={students} results={results} subjects={subjects} principalSignature={principalSignature} />
+          <StudentPanel students={students} results={results} subjects={subjects} principalSignature={principalSignature} logo={schoolLogo} />
         )}
       </main>
 
