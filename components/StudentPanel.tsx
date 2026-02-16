@@ -12,6 +12,7 @@ interface StudentPanelProps {
 const CLASSES = ['প্লে', 'নার্সারী', 'প্রথম', 'দ্বিতীয়', 'তৃতীয়', 'চতুর্থ', 'পঞ্চম'];
 const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '২০৩০'];
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
+const SCHOOL_LOGO = "https://vwmqaizaktmmtrijaqfb.supabase.co/storage/v1/object/public/assets/logo.png";
 
 const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects: classSubjectsMap, principalSignature }) => {
   const [searchType, setSearchType] = useState<'BATCH' | 'INDIVIDUAL'>('INDIVIDUAL');
@@ -115,7 +116,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
             getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
               <div className="bg-white dark:bg-gray-800 p-6 md:p-10 rounded-[40px] shadow-2xl border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
                  <div className="text-center mb-8 border-b-2 border-indigo-50 dark:border-indigo-900 pb-6 print-header">
-                   <h1 className="text-3xl md:text-5xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
+                   <div className="flex flex-col items-center justify-center mb-4">
+                     <img src={SCHOOL_LOGO} alt="School Logo" className="w-24 h-24 mb-2 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                     <h1 className="text-3xl md:text-5xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
+                   </div>
                    <div className="inline-block mt-3 bg-indigo-600 text-white px-8 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest">{indivSearch.exam} মূল্যায়নপত্র - {indivSearch.year}</div>
                  </div>
                  
@@ -256,6 +260,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
             
             <div className="p-2 md:p-3">
               <div className="print-header hidden mb-4 text-center">
+                <img src={SCHOOL_LOGO} alt="School Logo" className="w-16 h-16 mx-auto mb-2 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
                 <h1 className="text-xl font-black">আনওয়ারুল কুরআন একাডেমী</h1>
                 <h2 className="text-lg font-bold">{batchFilter.class} - {batchFilter.exam} ({batchFilter.year})</h2>
                 <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500">শ্রেণী ভিত্তিক মেধা তালিকা</h3>

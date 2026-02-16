@@ -16,9 +16,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, setView, darkMode, setDark
     <nav className="bg-indigo-700 dark:bg-indigo-900 text-white shadow-lg no-print transition-colors duration-300">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('DASHBOARD')}>
-            <i className="fas fa-book-quran text-2xl"></i>
-            <span className="text-xl font-bold tracking-tight">আনওয়ারুল কুরআন একাডেমী</span>
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setView('DASHBOARD')}>
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-indigo-200">
+              <img src="https://vwmqaizaktmmtrijaqfb.supabase.co/storage/v1/object/public/assets/logo.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const icon = e.currentTarget.parentElement?.querySelector('i');
+                if (icon) icon.style.display = 'block';
+              }} />
+              <i className="fas fa-book-quran text-indigo-700 text-xl hidden"></i>
+            </div>
+            <span className="text-lg md:text-xl font-bold tracking-tight">আনওয়ারুল কুরআন একাডেমী</span>
           </div>
           
           <div className="flex items-center space-x-2 md:space-x-4">
