@@ -45,9 +45,9 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [subjectClass, setSubjectClass] = useState('প্রথম');
   const [subjectInput, setSubjectInput] = useState('');
   const [noticeInput, setNoticeInput] = useState('');
-  const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentFilterClass, setStudentFilterClass] = useState('সব');
 
-  const [filter, setFilter] = useState({ class: 'প্রথম', year: '২০২৬' });
   const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
   const [bulkMarks, setBulkMarks] = useState<Record<string, Record<string, string>>>({});
 
@@ -89,6 +89,47 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     return 'F';
   };
 
+  const downloadSampleExcel = () => {
+    const data = [
+      {
+        'নাম': 'করিম উদ্দিন',
+        'রোল': '১০১',
+        'পিতা': 'আব্দুর রহিম',
+        'মাতা': 'ফাতেমা বেগম',
+        'মোবাইল': '01700000000',
+        'গ্রাম': 'কলাবাড়ী',
+        'শ্রেণী': 'প্রথম',
+        'সাল': '২০২৬'
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.writeFile(wb, "Student_Admission_Sample.xlsx");
+  };
+
+  const downloadResultSampleExcel = () => {
+    const classSubjects = subjects[entryConfig.class] || [];
+    if (classSubjects.length === 0) {
+      alert('এই শ্রেণীর জন্য কোনো বিষয় সেট করা হয়নি। অনুগ্রহ করে সেটিংসে বিষয় সেট করুন।');
+      return;
+    }
+    
+    // Create columns based on class subjects
+    const data = [
+      {
+        'রোল': '১০১',
+        'নাম': 'নমুনা ছাত্র',
+        ...Object.fromEntries(classSubjects.map(sub => [sub, '0']))
+      }
+    ];
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Marks");
+    XLSX.writeFile(wb, `Result_Entry_Sample_${entryConfig.class}.xlsx`);
+  };
+
   const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.roll) {
@@ -120,228 +161,71 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
-  const handleDownloadSample = () => {
-    const sampleData = [{ 'Name': 'আঃ রহমান', 'Roll': '1', 'Father Name': 'আব্দুল্লাহ', 'Mother Name': 'আয়েশা', 'Mobile': '01700', 'Village': 'মধুপুর', 'Class': 'প্রথম', 'Year': '২০২৬' }];
-    const ws = XLSX.utils.json_to_sheet(sampleData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sample");
-    XLSX.writeFile(wb, "Student_Enroll_Sample.xlsx");
-  };
-
-  const handleDownloadResultSample = () => {
-    const classSubjects = subjects[entryConfig.class] || [];
-    if (classSubjects.length === 0) {
-      alert('এই ক্লাসের জন্য কোনো বিষয় সেট করা নেই। সেটিংস থেকে বিষয় সেট করুন।');
-      return;
-    }
-
-    const filteredStudents = students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll));
-    
-    const sampleData = filteredStudents.map(s => {
-      const row: any = { 'রোল': s.roll, 'নাম': s.name };
-      classSubjects.forEach(sub => {
-        row[sub] = ''; // Empty for data entry
-      });
-      return row;
-    });
-
-    if (sampleData.length === 0) {
-      const row: any = { 'রোল': '', 'নাম': '' };
-      classSubjects.forEach(sub => row[sub] = '');
-      sampleData.push(row);
-    }
-
-    const ws = XLSX.utils.json_to_sheet(sampleData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Result_Entry");
-    XLSX.writeFile(wb, `Result_Sample_${entryConfig.class}_${entryConfig.exam}.xlsx`);
-  };
-
-  const handleResultFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data: any[] = XLSX.utils.sheet_to_json(ws);
         
-        const newBulkMarks = { ...bulkMarks };
-        const classSubjects = subjects[entryConfig.class] || [];
-        
-        data.forEach(row => {
-          const roll = (row['রোল'] || row['Roll'] || '').toString();
-          const student = students.find(s => s.roll.toString() === roll && s.studentClass === entryConfig.class && s.year === entryConfig.year);
-          
-          if (student) {
-            const studentMarks: Record<string, string> = newBulkMarks[student.id] || {};
-            classSubjects.forEach(sub => {
-              if (row[sub] !== undefined) {
-                studentMarks[sub] = row[sub].toString();
-              }
-            });
-            newBulkMarks[student.id] = studentMarks;
-          }
-        });
+        const importedStudents: Student[] = data.map((row, idx) => ({
+          id: (Date.now() + idx).toString(),
+          name: (row['নাম'] || row['Name'] || '').toString(),
+          roll: (row['রোল'] || row['Roll'] || '').toString(),
+          fatherName: (row['পিতা'] || row['Father Name'] || '').toString(),
+          motherName: (row['মাতা'] || row['Mother Name'] || '').toString(),
+          mobile: (row['মোবাইল'] || row['Mobile'] || '').toString(),
+          village: (row['গ্রাম'] || row['Village'] || '').toString(),
+          studentClass: (row['শ্রেণী'] || row['Class'] || formData.studentClass).toString(),
+          year: (row['সাল'] || row['Year'] || formData.year).toString(),
+        }));
 
-        setBulkMarks(newBulkMarks);
-        alert('এক্সেল ফাইল থেকে নম্বরগুলো সফলভাবে ইমপোর্ট করা হয়েছে। এখন "সংরক্ষণ করুন" বাটনে ক্লিক করুন।');
+        if (onAddStudents) {
+          setIsProcessing(true);
+          const success = await onAddStudents(importedStudents);
+          if (success) alert('সফলভাবে ইমপোর্ট করা হয়েছে!');
+          setIsProcessing(false);
+        }
       } catch (err) {
-        alert('ফাইলটি প্রসেস করতে সমস্যা হয়েছে। সঠিক ফরম্যাটের ফাইল ব্যবহার করুন।');
-      } finally {
-        if (resultExcelRef.current) resultExcelRef.current.value = '';
+        alert('ফাইলটি প্রসেস করতে সমস্যা হয়েছে।');
       }
     };
     reader.readAsBinaryString(file);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        setIsProcessing(true);
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws);
-        const newStudents: Student[] = data.map((item: any, index: number) => ({
-          id: (Date.now() + index).toString(),
-          name: item['Name'] || item['নাম'] || '',
-          roll: (item['Roll'] || item['রোল'] || '').toString(),
-          fatherName: item['Father Name'] || item['পিতার নাম'] || '',
-          motherName: item['Mother Name'] || item['মাতার নাম'] || '',
-          village: item['Village'] || item['গ্রাম'] || '',
-          mobile: (item['Mobile'] || item['মোবাইল'] || '').toString(),
-          studentClass: item['Class'] || item['শ্রেণী'] || formData.studentClass,
-          year: (item['Year'] || item['সাল'] || formData.year).toString(),
-        })).filter(s => s.name && s.roll);
-
-        if (newStudents.length > 0) {
-          const success = onAddStudents ? await onAddStudents(newStudents) : true;
-          if (success) { alert(`${newStudents.length} জন ইমপোর্ট করা হয়েছে!`); setActiveSubView('STUDENT_LIST'); }
-        }
-      } catch (err) { alert('ভুল ফাইল ফরম্যাট!'); }
-      finally { setIsProcessing(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  const handleSigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const base64 = evt.target?.result as string;
-      setIsProcessing(true);
-      const success = await onUpdatePrincipalSignature(base64);
-      if (success) alert('স্বাক্ষর আপডেট করা হয়েছে।');
-      setIsProcessing(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const base64 = evt.target?.result as string;
-      setIsProcessing(true);
-      const success = await onUpdateSchoolLogo(base64);
-      if (success) alert('স্কুল লোগো আপডেট করা হয়েছে।');
-      setIsProcessing(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDownloadStudents = () => {
-    const filtered = students.filter(s => s.studentClass === filter.class && s.year === filter.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll));
-    const ws = XLSX.utils.json_to_sheet(filtered.map(s => ({ 'রোল': s.roll, 'নাম': s.name, 'পিতার নাম': s.fatherName, 'মাতার নাম': s.motherName, 'মোবাইল': s.mobile, 'শ্রেণী': s.studentClass, 'গ্রাম': s.village, 'সাল': s.year })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Students");
-    XLSX.writeFile(wb, `Student_List_${filter.class}.xlsx`);
-  };
-
-  const handleDownloadResults = () => {
-    const filtered = results.filter(r => r.class === filter.class && r.year === filter.year);
-    const ws = XLSX.utils.json_to_sheet(filtered.map(r => {
-      const s = students.find(st => st.id === r.studentId);
-      const mObj: any = {}; r.marks.forEach(m => mObj[m.subjectName] = m.marks);
-      return { 'রোল': s?.roll, 'নাম': s?.name, 'পরীক্ষা': r.examName, ...mObj, 'মোট': r.totalMarks, 'গ্রেড': r.grade, 'পাবলিশড': r.isPublished ? 'হ্যাঁ' : 'না' };
-    }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Results");
-    XLSX.writeFile(wb, `Results_${filter.class}.xlsx`);
-  };
-
-  const handleUpdatePassword = () => {
-    if (newPass.length < 6) { alert('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return; }
-    onUpdatePassword(newPass);
-  };
-
-  const handleSaveSubjects = async () => {
-    const existing = subjects[subjectClass] || [];
-    const newOnes = subjectInput.split(',').map(s => s.trim()).filter(s => s !== '');
-    if (newOnes.length === 0) return;
-    
-    const merged = Array.from(new Set([...existing, ...newOnes]));
-    
-    setIsProcessing(true);
-    const success = await onSetSubjectsForClass(subjectClass, merged);
-    if (success) { alert('সংরক্ষণ করা হয়েছে।'); setSubjectInput(''); }
-    setIsProcessing(false);
-  };
-
-  const handleDeleteSubject = async (className: string, subName: string) => {
-    if (!confirm(`আপনি কি নিশ্চিতভাবে "${subName}" বিষয়টিকে মুছে ফেলতে চান?`)) return;
-    
-    const current = subjects[className] || [];
-    const filtered = current.filter(s => s !== subName);
-    
-    setIsProcessing(true);
-    const success = await onSetSubjectsForClass(className, filtered);
-    if (success) alert('বিষয়টি মুছে ফেলা হয়েছে।');
-    setIsProcessing(false);
-  };
-
   const handleAddNotice = async () => {
     if (!noticeInput.trim()) return;
+    const newNotice: Notice = {
+      id: Date.now().toString(),
+      text: noticeInput,
+      date: new Date().toLocaleDateString('bn-BD')
+    };
     setIsProcessing(true);
-    
-    let updatedNotices;
-    if (editingNoticeId) {
-      updatedNotices = notices.map(n => n.id === editingNoticeId ? { ...n, text: noticeInput } : n);
-    } else {
-      const newNotice = { id: Date.now().toString(), text: noticeInput, date: new Date().toLocaleDateString('bn-BD') };
-      updatedNotices = [newNotice, ...notices];
-    }
-    
-    const success = await onUpdateNotices(updatedNotices);
-    if (success) { 
-      alert(editingNoticeId ? 'নোটিশ আপডেট করা হয়েছে!' : 'নোটিশ প্রকাশিত হয়েছে!'); 
-      setNoticeInput(''); 
-      setEditingNoticeId(null);
+    const success = await onUpdateNotices([newNotice, ...notices]);
+    if (success) {
+      setNoticeInput('');
+      alert('নোটিশ যোগ করা হয়েছে।');
     }
     setIsProcessing(false);
   };
 
   const handleDeleteNotice = async (id: string) => {
-    if (!confirm('আপনি কি এই নোটিশটি মুছে ফেলতে চান?')) return;
+    if (!confirm('আপনি কি এই নোটিশটি মুছতে চান?')) return;
     setIsProcessing(true);
-    const updatedNotices = notices.filter(n => n.id !== id);
-    const success = await onUpdateNotices(updatedNotices);
-    if (success) alert('নোটিশটি মুছে ফেলা হয়েছে।');
+    const success = await onUpdateNotices(notices.filter(n => n.id !== id));
     setIsProcessing(false);
   };
 
-  const handleEditNotice = (notice: Notice) => {
-    setNoticeInput(notice.text);
-    setEditingNoticeId(notice.id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleTogglePublish = async (resultId: string) => {
+    const res = results.find(r => r.id === resultId);
+    if (!res) return;
+    setIsProcessing(true);
+    await onSaveResult({ ...res, isPublished: !res.isPublished });
+    setIsProcessing(false);
   };
 
   const handleSaveBulkResults = async () => {
@@ -366,324 +250,411 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
-  const handleTogglePublish = async (res: Result) => {
-    setIsProcessing(true);
-    const updatedResult = { ...res, isPublished: !res.isPublished };
-    const success = await onSaveResult(updatedResult);
-    setIsProcessing(false);
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const matchesSearch = s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.roll.includes(studentSearch);
+      const matchesClass = studentFilterClass === 'সব' || s.studentClass === studentFilterClass;
+      return matchesSearch && matchesClass;
+    }).sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
+  }, [students, studentSearch, studentFilterClass]);
+
+  const handleSigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => onUpdatePrincipalSignature(evt.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
-  const handlePublishAll = async () => {
-    const filteredResults = results.filter(r => r.class === filter.class && r.year === filter.year && !r.isPublished);
-    if (filteredResults.length === 0) {
-      alert('পাবলিশ করার মতো কোনো নতুন রেজাল্ট পাওয়া যায়নি।');
-      return;
-    }
-    if (!confirm(`${filter.class} শ্রেণীর (${filter.year}) সকল রেজাল্ট একসাথে পাবলিশ করতে চান?`)) return;
-
-    setIsProcessing(true);
-    const resultsToUpdate = filteredResults.map(r => ({ ...r, isPublished: true }));
-    const success = await onSaveResults(resultsToUpdate);
-    if (success) {
-      alert('সকল রেজাল্ট সফলভাবে পাবলিশ করা হয়েছে!');
-    }
-    setIsProcessing(false);
-  };
-
-  const filteredStudentsForResults = useMemo(() => {
-    return students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
-  }, [students, entryConfig.class, entryConfig.year]);
-
-  const handleKeyDown = (e: React.KeyboardEvent, studentIdx: number, subIdx: number) => {
-    if (e.key === 'ArrowDown' || e.key === 'Enter') {
-      e.preventDefault();
-      const nextInput = document.getElementById(`input-${studentIdx + 1}-${subIdx}`);
-      if (nextInput) nextInput.focus();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const prevInput = document.getElementById(`input-${studentIdx - 1}-${subIdx}`);
-      if (prevInput) prevInput.focus();
-    }
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => onUpdateSchoolLogo(evt.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 no-print bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm border dark:border-gray-700">
-        {[
-          { id: 'STUDENT_LIST', label: 'ছাত্র তালিকা', icon: 'fa-users' },
-          { id: 'ENROLL', label: 'নতুন ভর্তি', icon: 'fa-user-plus' },
-          { id: 'RESULT_ENTRY', label: 'রেজাল্ট এন্ট্রি', icon: 'fa-file-signature' },
-          { id: 'MANAGE_RESULTS', label: 'রেজাল্ট ম্যানেজ', icon: 'fa-tasks' },
-          { id: 'NOTICES', label: 'নোটিশ', icon: 'fa-bullhorn' },
-          { id: 'SETTINGS', label: 'সেটিংস', icon: 'fa-cog' },
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveSubView(tab.id as TeacherSubView)} className={`flex-1 min-w-[100px] py-2.5 px-2 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-1 text-[12px] ${activeSubView === tab.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-            <i className={`fas ${tab.icon} text-base`}></i> {tab.label}
-          </button>
-        ))}
+      {/* Mobile-Friendly Sub-Navigation */}
+      <div className="no-print bg-white/80 dark:bg-gray-800/80 backdrop-blur-md p-2 rounded-2xl shadow-xl border dark:border-gray-700 overflow-x-auto scrollbar-hide sticky top-[80px] z-40">
+        <div className="flex min-w-max gap-2 px-1">
+          {[
+            { id: 'STUDENT_LIST', label: 'ছাত্র তালিকা', icon: 'fa-users' },
+            { id: 'ENROLL', label: 'ভর্তি ফরম', icon: 'fa-user-plus' },
+            { id: 'RESULT_ENTRY', label: 'নম্বর এন্ট্রি', icon: 'fa-file-signature' },
+            { id: 'MANAGE_RESULTS', label: 'রেজাল্ট ম্যানেজ', icon: 'fa-tasks' },
+            { id: 'NOTICES', label: 'নোটিশ', icon: 'fa-bullhorn' },
+            { id: 'SETTINGS', label: 'সেটিংস', icon: 'fa-cog' },
+          ].map(tab => (
+            <button 
+              key={tab.id} 
+              onClick={() => setActiveSubView(tab.id as TeacherSubView)} 
+              className={`py-3 px-5 rounded-xl font-black transition-all duration-300 flex items-center gap-2 text-xs md:text-sm ${
+                activeSubView === tab.id 
+                ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] scale-105' 
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <i className={`fas ${tab.icon}`}></i> {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* View: Student List */}
+      {activeSubView === 'STUDENT_LIST' && (
+        <div className="animate-fade-in space-y-4">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-2xl border dark:border-gray-700">
+             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শিক্ষার্থী তালিকা ({filteredStudents.length})</h2>
+                <div className="flex gap-2 w-full md:w-auto">
+                   <select className="p-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
+                      <option value="সব">সব শ্রেণী</option>
+                      {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                   </select>
+                   <input 
+                     type="text" 
+                     placeholder="নাম বা রোল দিয়ে খুঁজুন..." 
+                     className="flex-grow md:w-64 p-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                     value={studentSearch}
+                     onChange={e => setStudentSearch(e.target.value)}
+                   />
+                </div>
+             </div>
+
+             <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                   <thead className="bg-indigo-50 dark:bg-indigo-900/20 text-[10px] font-black uppercase text-indigo-400">
+                      <tr>
+                         <th className="p-4 rounded-tl-xl">রোল</th>
+                         <th className="p-4">নাম</th>
+                         <th className="p-4">শ্রেণী</th>
+                         <th className="p-4">পিতার নাম</th>
+                         <th className="p-4">মাতার নাম</th>
+                         <th className="p-4">মোবাইল</th>
+                         <th className="p-4 rounded-tr-xl text-center">অ্যাকশন</th>
+                      </tr>
+                   </thead>
+                   <tbody className="divide-y dark:divide-gray-700">
+                      {filteredStudents.map(student => (
+                        <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                           <td className="p-4 font-black text-indigo-600 dark:text-indigo-400">{student.roll}</td>
+                           <td className="p-4 font-bold">{student.name}</td>
+                           <td className="p-4 font-medium">{student.studentClass} ({student.year})</td>
+                           <td className="p-4 text-sm">{student.fatherName}</td>
+                           <td className="p-4 text-sm">{student.motherName}</td>
+                           <td className="p-4 text-sm font-mono">{student.mobile}</td>
+                           <td className="p-4 text-center">
+                              <div className="flex justify-center gap-2">
+                                 <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
+                                 <button onClick={() => onDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
+                              </div>
+                           </td>
+                        </tr>
+                      ))}
+                      {filteredStudents.length === 0 && (
+                        <tr><td colSpan={7} className="p-20 text-center text-gray-400 font-bold">কোনো শিক্ষার্থী পাওয়া যায়নি।</td></tr>
+                      )}
+                   </tbody>
+                </table>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* View: Enroll Student - Compressed View */}
+      {activeSubView === 'ENROLL' && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 animate-fade-in">
+           <div className="lg:col-span-3 bg-white dark:bg-gray-800 p-5 md:p-6 rounded-[32px] shadow-2xl border dark:border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300">নতুন শিক্ষার্থী ভর্তি ফরম</h2>
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-400 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 rounded-full">
+                  <i className="fas fa-info-circle text-indigo-500"></i> সব তথ্য সঠিকভাবে পূরণ করুন
+                </div>
+              </div>
+              <form onSubmit={handleEnrollSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                 {[
+                   { label: 'শিক্ষার্থীর নাম', key: 'name', type: 'text', placeholder: 'নাম' },
+                   { label: 'রোল নম্বর', key: 'roll', type: 'number', placeholder: 'রোল' },
+                   { label: 'পিতার নাম', key: 'fatherName', type: 'text', placeholder: 'পিতার নাম' },
+                   { label: 'মাতার নাম', key: 'motherName', type: 'text', placeholder: 'মাতার নাম' },
+                   { label: 'মোবাইল নম্বর', key: 'mobile', type: 'text', placeholder: 'মোবাইল' },
+                   { label: 'গ্রাম/ঠিকানা', key: 'village', type: 'text', placeholder: 'গ্রামের নাম' }
+                 ].map(field => (
+                   <div key={field.key} className="space-y-1">
+                      <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">{field.label}</label>
+                      <input 
+                        type={field.type} 
+                        className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-xs focus:ring-1 focus:ring-indigo-600 transition-all shadow-sm"
+                        placeholder={field.placeholder}
+                        value={(formData as any)[field.key]}
+                        onChange={e => setFormData({...formData, [field.key]: e.target.value})}
+                      />
+                   </div>
+                 ))}
+                 <div className="space-y-1">
+                    <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">শ্রেণী</label>
+                    <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-xs shadow-sm" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
+                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div className="space-y-1">
+                    <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">শিক্ষাবর্ষ</label>
+                    <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-xs shadow-sm" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
+                       {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                 </div>
+                 <div className="flex items-end">
+                    <button disabled={isProcessing} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2 text-xs">
+                       {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-check-circle"></i>} ভর্তি নিশ্চিত করুন
+                    </button>
+                 </div>
+              </form>
+           </div>
+           
+           <div className="lg:col-span-1 space-y-4">
+              <div className="bg-gradient-to-br from-green-600 to-green-700 text-white p-5 rounded-[32px] shadow-xl relative overflow-hidden group">
+                 <h3 className="text-sm font-black mb-2 flex items-center gap-2 relative z-10">
+                    <i className="fas fa-file-excel"></i> এক্সেল ইমপোর্ট
+                 </h3>
+                 <p className="text-[10px] text-green-100 mb-4 relative z-10 font-medium">একসাথে একাধিক শিক্ষার্থী যোগ করতে এক্সেল ব্যবহার করুন।</p>
+                 <div className="flex flex-col gap-2 relative z-10">
+                    <button onClick={() => fileInputRef.current?.click()} className="w-full py-2.5 bg-white text-green-700 rounded-xl font-black shadow-md hover:bg-green-50 transition-all active:scale-95 text-xs flex items-center justify-center gap-2">
+                      <i className="fas fa-upload"></i> ফাইল আপলোড
+                    </button>
+                    <button onClick={downloadSampleExcel} className="w-full py-2.5 bg-green-800/40 text-white rounded-xl font-black border border-green-500/30 hover:bg-green-800/60 transition-all active:scale-95 text-[10px] flex items-center justify-center gap-2">
+                      <i className="fas fa-download"></i> নমুনা ফাইল ডাউনলোড
+                    </button>
+                 </div>
+                 <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx, .xls" onChange={handleExcelImport} />
+                 <i className="fas fa-file-excel absolute -bottom-2 -right-2 text-6xl text-white/10 rotate-12 group-hover:scale-110 transition-transform"></i>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-[32px] border dark:border-gray-700 shadow-lg">
+                 <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                     <i className="fas fa-users text-indigo-600"></i>
+                   </div>
+                   <div>
+                     <p className="text-[10px] font-black text-gray-400 uppercase leading-none">মোট শিক্ষার্থী</p>
+                     <p className="text-xl font-black text-gray-900 dark:text-gray-100 leading-none mt-1">{students.length}</p>
+                   </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* View: Result Entry */}
       {activeSubView === 'RESULT_ENTRY' && (
         <div className="animate-fade-in space-y-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-              <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
-                <i className="fas fa-edit"></i> রেজাল্ট এন্ট্রি ও এডিট
-              </h2>
+          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-[32px] shadow-2xl border dark:border-gray-700">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-3">
+                  <i className="fas fa-edit"></i> রেজাল্ট এন্ট্রি প্যানেল
+                </h2>
+                <p className="text-xs text-gray-500 mt-1 font-bold">শ্রেণী ও পরীক্ষা নির্বাচন করে নম্বর প্রদান করুন</p>
+              </div>
               <div className="flex gap-2">
-                <button onClick={handleDownloadResultSample} className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-                  <i className="fas fa-file-download"></i> নমুনা ফাইল
+                <button onClick={downloadResultSampleExcel} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-4 py-2.5 rounded-xl text-xs font-black border border-blue-200 dark:border-blue-800 flex items-center gap-2 hover:bg-blue-100 transition-colors">
+                  <i className="fas fa-download"></i> নমুনা ফাইল
                 </button>
-                <button onClick={() => resultExcelRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-3 py-2 rounded-xl text-xs font-bold border border-green-200 dark:border-green-800 flex items-center gap-1">
-                  <i className="fas fa-file-excel"></i> এক্সেল ইমপোর্ট
+                <button onClick={() => resultExcelRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2.5 rounded-xl text-xs font-black border border-green-200 dark:border-green-800 flex items-center gap-2 hover:bg-green-100 transition-colors">
+                  <i className="fas fa-file-excel"></i> ইমপোর্ট
                 </button>
-                <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" onChange={handleResultFileUpload} />
+                <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" />
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
-              <select className="p-2.5 rounded-xl border-none outline-none font-bold text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value={entryConfig.class} onChange={e => setEntryConfig({...entryConfig, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-              <select className="p-2.5 rounded-xl border-none outline-none font-bold text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value={entryConfig.year} onChange={e => setEntryConfig({...entryConfig, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
-              <select className="p-2.5 rounded-xl border-none outline-none font-bold text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" value={entryConfig.exam} onChange={e => setEntryConfig({...entryConfig, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-900/50">
+              <div className="space-y-1">
+                 <label className="text-[10px] font-black text-indigo-400 uppercase ml-1">শ্রেণী</label>
+                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 font-bold" value={entryConfig.class} onChange={e => setEntryConfig({...entryConfig, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              </div>
+              <div className="space-y-1">
+                 <label className="text-[10px] font-black text-indigo-400 uppercase ml-1">সাল</label>
+                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 font-bold" value={entryConfig.year} onChange={e => setEntryConfig({...entryConfig, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
+              </div>
+              <div className="space-y-1">
+                 <label className="text-[10px] font-black text-indigo-400 uppercase ml-1">পরীক্ষা</label>
+                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 font-bold" value={entryConfig.exam} onChange={e => setEntryConfig({...entryConfig, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select>
+              </div>
             </div>
+            
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
-                <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-500 dark:text-gray-300">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-400">
                   <tr>
-                    <th className="p-3 text-left border-b dark:border-gray-600">রোল ও নাম</th>
-                    {(subjects[entryConfig.class] || []).map(sub => <th key={sub} className="p-3 text-center border-b dark:border-gray-600">{sub}</th>)}
-                    <th className="p-3 text-center border-b dark:border-gray-600">মোট ও গ্রেড</th>
+                    <th className="p-4 text-left">রোল ও নাম</th>
+                    {(subjects[entryConfig.class] || []).map(sub => <th key={sub} className="p-4 text-center">{sub}</th>)}
+                    <th className="p-4 text-center">মোট ও গ্রেড</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-gray-700">
-                  {filteredStudentsForResults.map((student, studentIdx) => {
+                  {students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll)).map(student => {
                     const currentMarks = bulkMarks[student.id] || {};
                     const classSubjects = subjects[entryConfig.class] || [];
                     const total = classSubjects.reduce((acc, sub) => acc + parseInt(currentMarks[sub] || '0'), 0);
                     const grade = calculateGrade(total, classSubjects.length);
                     return (
                       <tr key={student.id} className="text-gray-800 dark:text-gray-200">
-                        <td className="p-3 min-w-[150px]"><div className="font-black text-indigo-600 dark:text-indigo-400 text-xs">#{student.roll}</div><div className="text-sm font-bold truncate">{student.name}</div></td>
-                        {classSubjects.map((sub, subIdx) => (
-                          <td key={sub} className="p-1.5 text-center">
+                        <td className="p-4">
+                           <div className="font-black text-indigo-600 text-xs">রোল: {student.roll}</div>
+                           <div className="text-sm font-bold">{student.name}</div>
+                        </td>
+                        {classSubjects.map(sub => (
+                          <td key={sub} className="p-2 text-center">
                             <input 
-                              id={`input-${studentIdx}-${subIdx}`}
                               type="number" 
-                              className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 text-indigo-700 dark:text-indigo-400 rounded-lg outline-none font-black text-sm border-2 border-gray-200 dark:border-gray-600 focus:border-indigo-500 shadow-inner no-spinner" 
+                              className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 rounded-lg outline-none font-bold text-sm border focus:border-indigo-500 no-spinner" 
                               value={currentMarks[sub] || ''} 
                               placeholder="0" 
                               onChange={e => setBulkMarks(prev => ({ ...prev, [student.id]: { ...(prev[student.id] || {}), [sub]: e.target.value } }))} 
-                              onKeyDown={e => handleKeyDown(e, studentIdx, subIdx)}
                             />
                           </td>
                         ))}
-                        <td className="p-3 text-center min-w-[80px]"><div className="font-black text-sm text-gray-900 dark:text-gray-100">{total}</div><div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-block ${grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>{grade}</div></td>
+                        <td className="p-4 text-center">
+                           <div className="font-black text-lg">{total}</div>
+                           <div className={`text-[10px] font-black px-2 py-0.5 rounded-full inline-block ${grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>{grade}</div>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={handleSaveBulkResults} disabled={isProcessing} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2">
-                {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-save"></i>} সংরক্ষণ করুন
-              </button>
+            
+            <div className="mt-8 flex justify-end">
+               <button onClick={handleSaveBulkResults} disabled={isProcessing} className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
+                 {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-save"></i>} তথ্য সংরক্ষণ করুন
+               </button>
             </div>
           </div>
         </div>
       )}
 
-      {activeSubView === 'ENROLL' && (
-        <div className="animate-fade-in max-w-4xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-xl border dark:border-gray-700">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b dark:border-gray-700 pb-4">
-              <div>
-                <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300">নতুন শিক্ষার্থী ভর্তি</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">নির্ভুলভাবে তথ্য পূরণ করুন</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handleDownloadSample} className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-3 py-2 rounded-xl text-xs font-bold border border-amber-200 dark:border-amber-800"><i className="fas fa-download mr-1"></i> নমুনা</button>
-                <button onClick={() => fileInputRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-3 py-2 rounded-xl text-xs font-bold border border-green-200 dark:border-green-800"><i className="fas fa-file-excel mr-1"></i> ইমপোর্ট</button>
-                <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx, .xls" onChange={handleFileUpload} />
-              </div>
-            </div>
-
-            <form onSubmit={handleEnrollSubmit} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { label: 'শিক্ষার্থীর নাম', key: 'name', icon: 'fa-user' },
-                  { label: 'পিতার নাম', key: 'fatherName', icon: 'fa-male' },
-                  { label: 'মাতার নাম', key: 'motherName', icon: 'fa-female' },
-                  { label: 'রোল নম্বর', key: 'roll', icon: 'fa-id-badge', type: 'number' },
-                  { label: 'মোবাইল', key: 'mobile', icon: 'fa-phone' },
-                ].map(field => (
-                  <div key={field.key} className="space-y-1">
-                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase ml-1">{field.label}</label>
-                    <div className="relative">
-                      <i className={`fas ${field.icon} absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-500 text-xs`}></i>
-                      <input 
-                        type={field.type || 'text'}
-                        className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none text-gray-900 dark:text-gray-100 font-bold text-sm" 
-                        placeholder={field.label}
-                        value={(formData as any)[field.key]} 
-                        onChange={e => setFormData({...formData, [field.key]: e.target.value})} 
-                        required={field.key === 'name' || field.key === 'roll'} 
-                      />
-                    </div>
-                  </div>
-                ))}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase ml-1">শ্রেণী</label>
-                  <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl text-gray-900 dark:text-gray-100 font-bold text-sm" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase ml-1">শিক্ষাবর্ষ</label>
-                  <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl text-gray-900 dark:text-gray-100 font-bold text-sm" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
-                </div>
-                <div className="md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase ml-1">ঠিকানা (গ্রাম)</label>
-                  <input className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl text-gray-900 dark:text-gray-100 font-bold text-sm" placeholder="গ্রামের নাম" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} />
-                </div>
-              </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black shadow-xl">ভর্তি সম্পন্ন করুন</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {activeSubView === 'STUDENT_LIST' && (
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border dark:border-gray-700 overflow-hidden">
-          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700 flex flex-wrap gap-2 items-center justify-between">
-            <div className="flex gap-2">
-              <select className="p-2 bg-white dark:bg-gray-800 dark:text-gray-100 rounded-xl border-none shadow-sm font-bold text-sm" value={filter.class} onChange={e => setFilter({...filter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-              <select className="p-2 bg-white dark:bg-gray-800 dark:text-gray-100 rounded-xl border-none shadow-sm font-bold text-sm" value={filter.year} onChange={e => setFilter({...filter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
-              <button onClick={handleDownloadStudents} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-2 rounded-xl text-xs font-bold border border-indigo-200 dark:border-indigo-800">ডাউনলোড</button>
-            </div>
-            <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400">মোট: {students.filter(s => s.studentClass === filter.class && s.year === filter.year).length} জন</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-500 dark:text-gray-300 tracking-wider">
-                <tr>
-                  <th className="px-4 py-3">রোল</th>
-                  <th className="px-4 py-3">নাম</th>
-                  <th className="px-4 py-3">পিতার নাম</th>
-                  <th className="px-4 py-3">মাতার নাম</th>
-                  <th className="px-4 py-3 text-center">শ্রেণী</th>
-                  <th className="px-4 py-3">মোবাইল</th>
-                  <th className="px-4 py-3">গ্রাম</th>
-                  <th className="px-4 py-3 text-center">অ্যাকশন</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y dark:divide-gray-700 text-gray-800 dark:text-gray-200">
-                {students.filter(s => s.studentClass === filter.class && s.year === filter.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll)).map(s => (
-                  <tr key={s.id} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10">
-                    <td className="px-4 py-3 font-black text-indigo-600 dark:text-indigo-400 text-sm">{s.roll}</td>
-                    <td className="px-4 py-3 font-bold text-sm">{s.name}</td>
-                    <td className="px-4 py-3 text-xs">{s.fatherName}</td>
-                    <td className="px-4 py-3 text-xs">{s.motherName}</td>
-                    <td className="px-4 py-3 text-center text-xs font-bold">{s.studentClass}</td>
-                    <td className="px-4 py-3 text-xs">{s.mobile || '-'}</td>
-                    <td className="px-4 py-3 text-xs">{s.village || '-'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center gap-3">
-                        <button onClick={() => setEditingStudent(s)} className="text-indigo-600 dark:text-indigo-400 hover:scale-110 transition-transform"><i className="fas fa-edit"></i></button>
-                        <button onClick={() => { if(confirm(`${s.name} ডিলিট?`)) onDeleteStudent(s.id); }} className="text-red-500 dark:text-red-400 hover:scale-110 transition-transform"><i className="fas fa-trash"></i></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
+      {/* View: Manage Results (Publishing) */}
       {activeSubView === 'MANAGE_RESULTS' && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300">রেজাল্ট ম্যানেজ ও পাবলিশ</h2>
-            <div className="flex flex-wrap gap-2">
-              <button 
-                onClick={handlePublishAll} 
-                disabled={isProcessing}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md flex items-center gap-2 transition-all"
-              >
-                {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-bullhorn"></i>} সব পাবলিশ করুন
-              </button>
-              <button onClick={handleDownloadResults} className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-xl text-xs font-bold border border-indigo-200 dark:border-indigo-800 flex items-center gap-2">
-                <i className="fas fa-file-excel"></i> এক্সেল ডাউনলোড
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold text-sm" value={filter.class} onChange={e => setFilter({...filter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-            <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold text-sm" value={filter.year} onChange={e => setFilter({...filter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-500 dark:text-gray-300 tracking-wider">
-                <tr>
-                  <th className="p-3">ছাত্র</th>
-                  <th className="p-3">পরীক্ষা</th>
-                  <th className="p-3 text-center">মোট</th>
-                  <th className="p-3 text-center">গ্রেড</th>
-                  <th className="p-3 text-center">স্ট্যাটাস</th>
-                  <th className="p-3 text-center">অ্যাকশন</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y dark:divide-gray-700 text-sm text-gray-800 dark:text-gray-200">
-                {results.filter(r => r.class === filter.class && r.year === filter.year).map(res => {
-                  const s = students.find(st => st.id === res.studentId);
-                  return (
-                    <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/20">
-                      <td className="p-3 font-bold">{s?.name} <span className="text-indigo-600 dark:text-indigo-400 text-xs">#{s?.roll}</span></td>
-                      <td className="p-3 text-xs">{res.examName}</td>
-                      <td className="p-3 text-center font-black">{res.totalMarks}</td>
-                      <td className="p-3 text-center"><span className={`px-2 py-0.5 rounded text-[10px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>{res.grade}</span></td>
-                      <td className="p-3 text-center">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black ${res.isPublished ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
-                          {res.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => handleTogglePublish(res)} className={`w-8 h-8 rounded-lg flex items-center justify-center ${res.isPublished ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'}`}><i className={`fas ${res.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
-                          <button onClick={() => { if(confirm('ডিলিট?')) onDeleteResult(res.id); }} className="w-8 h-8 rounded-lg bg-red-50 text-red-500"><i className="fas fa-trash-alt"></i></button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        <div className="animate-fade-in space-y-4">
+           <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-2xl border dark:border-gray-700">
+              <h2 className="text-2xl font-black mb-6 text-indigo-900 dark:text-indigo-300">রেজাল্ট পাবলিশ ম্যানেজমেন্ট</h2>
+              <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-400">
+                       <tr>
+                          <th className="p-4">রোল ও শিক্ষার্থীর নাম</th>
+                          <th className="p-4">শ্রেণী ও সাল</th>
+                          <th className="p-4">পরীক্ষার নাম</th>
+                          <th className="p-4 text-center">প্রাপ্ত নম্বর</th>
+                          <th className="p-4 text-center">অবস্থা</th>
+                          <th className="p-4 text-center">অ্যাকশন</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-gray-700">
+                       {results.sort((a,b) => b.year.localeCompare(a.year)).map(res => {
+                          const student = students.find(s => s.id === res.studentId);
+                          return (
+                            <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                               <td className="p-4">
+                                  <div className="font-bold">{student?.name || 'অজানা'}</div>
+                                  <div className="text-[10px] text-gray-400 font-black uppercase">রোল: {student?.roll}</div>
+                               </td>
+                               <td className="p-4 text-sm font-medium">{res.class} ({res.year})</td>
+                               <td className="p-4 text-sm font-bold text-indigo-600">{res.examName}</td>
+                               <td className="p-4 text-center font-black">{res.totalMarks} ({res.grade})</td>
+                               <td className="p-4 text-center">
+                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${res.isPublished ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                     {res.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
+                                  </span>
+                               </td>
+                               <td className="p-4 text-center">
+                                  <div className="flex justify-center gap-2">
+                                     <button onClick={() => handleTogglePublish(res.id)} className={`p-2 rounded-lg transition-colors ${res.isPublished ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'}`} title={res.isPublished ? "আনপাবলিশ করুন" : "পাবলিশ করুন"}>
+                                        <i className={`fas ${res.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                     </button>
+                                     <button onClick={() => onDeleteResult(res.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><i className="fas fa-trash"></i></button>
+                                  </div>
+                               </td>
+                            </tr>
+                          );
+                       })}
+                       {results.length === 0 && (
+                         <tr><td colSpan={6} className="p-20 text-center text-gray-400 font-bold">কোনো রেজাল্ট পাওয়া যায়নি।</td></tr>
+                       )}
+                    </tbody>
+                 </table>
+              </div>
+           </div>
         </div>
       )}
 
+      {/* View: Notices Management */}
+      {activeSubView === 'NOTICES' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+           <div className="lg:col-span-2 space-y-4">
+              {notices.map(notice => (
+                <div key={notice.id} className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700 flex justify-between items-start group">
+                   <div>
+                      <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mb-2 inline-block">{notice.date}</span>
+                      <p className="font-bold text-gray-800 dark:text-gray-200">{notice.text}</p>
+                   </div>
+                   <button onClick={() => handleDeleteNotice(notice.id)} className="p-3 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600"><i className="fas fa-trash"></i></button>
+                </div>
+              ))}
+              {notices.length === 0 && <div className="p-20 text-center text-gray-400 font-bold bg-white dark:bg-gray-800 rounded-3xl">কোনো নোটিশ নেই।</div>}
+           </div>
+           
+           <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700 h-fit">
+              <h3 className="text-xl font-black mb-6 flex items-center gap-2">
+                 <i className="fas fa-plus-circle text-indigo-500"></i> নতুন নোটিশ
+              </h3>
+              <textarea 
+                className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-indigo-600 h-40 resize-none mb-4"
+                placeholder="এখানে নোটিশটি লিখুন..."
+                value={noticeInput}
+                onChange={e => setNoticeInput(e.target.value)}
+              />
+              <button onClick={handleAddNotice} disabled={isProcessing} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
+                 {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-paper-plane"></i>} নোটিশ পাবলিশ করুন
+              </button>
+           </div>
+        </div>
+      )}
+
+      {/* View: Settings */}
       {activeSubView === 'SETTINGS' && (
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">স্কুল লোগো পরিবর্তন</h2>
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-32 h-32 bg-gray-50 dark:bg-gray-700 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden">
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
+          {/* Logo Upload */}
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+            <h2 className="text-2xl font-black mb-8 text-gray-900 dark:text-gray-100 flex items-center gap-3">
+               <i className="fas fa-image text-amber-500"></i> স্কুলের লোগো সেট করুন
+            </h2>
+            <div className="flex flex-col md:flex-row items-center gap-10">
+              <div className="flex-shrink-0 w-44 h-44 bg-gray-50 dark:bg-gray-700 rounded-[32px] border-4 border-dashed border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden shadow-inner group relative">
                 {schoolLogo ? (
-                  <img src={schoolLogo} alt="School Logo" className="w-full h-full object-contain" />
+                  <img src={schoolLogo} alt="School Logo" className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform" />
                 ) : (
-                  <div className="text-center p-2">
-                    <i className="fas fa-image text-gray-300 text-2xl mb-1"></i>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">লোগো নেই</p>
+                  <div className="text-center p-4">
+                    <i className="fas fa-cloud-upload-alt text-gray-300 text-4xl mb-2"></i>
+                    <p className="text-[10px] text-gray-400 font-black uppercase">লোগো নেই</p>
                   </div>
                 )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                   <i className="fas fa-camera text-white text-2xl"></i>
+                </div>
               </div>
-              <div className="flex-grow space-y-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">নেভিগেশন বার এবং মার্কশিটে প্রদর্শনের জন্য স্কুলের লোগো আপলোড করুন। বৃত্তাকার লোগো হলে সব জায়গায় সুন্দর দেখাবে।</p>
-                <div className="flex gap-2">
-                  <button onClick={() => logoInputRef.current?.click()} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2">
-                    <i className="fas fa-camera"></i> লোগো আপলোড করুন
+              <div className="flex-grow space-y-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-bold leading-relaxed">
+                   আপনার প্রতিষ্ঠানের লোগো আপলোড করুন যা নেভিগেশন বার এবং প্রতিটি মার্কশিটের উপরে প্রদর্শিত হবে। একটি স্বচ্ছ (PNG) বা সাদা ব্যাকগ্রাউন্ডের লোগো ব্যবহার করা উত্তম।
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={() => logoInputRef.current?.click()} className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all flex items-center gap-2 active:scale-95">
+                    <i className="fas fa-plus-circle"></i> নতুন লোগো
                   </button>
                   {schoolLogo && (
-                    <button onClick={() => onUpdateSchoolLogo('')} className="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-bold text-sm">মুছে ফেলুন</button>
+                    <button onClick={() => onUpdateSchoolLogo('')} className="bg-red-50 text-red-600 px-6 py-3.5 rounded-2xl font-black text-sm border border-red-100 hover:bg-red-100 transition-all">মুছে ফেলুন</button>
                   )}
                 </div>
                 <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
@@ -691,186 +662,87 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">পাসওয়ার্ড পরিবর্তন</h2>
-            <div className="flex gap-2">
-              <input type="password" placeholder="নতুন পাসওয়ার্ড" className="flex-grow p-2.5 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl outline-none text-sm border border-transparent focus:border-indigo-500" value={newPass} onChange={e => setNewPass(e.target.value)} />
-              <button onClick={handleUpdatePassword} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm">আপডেট</button>
-            </div>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+             <div className="bg-white dark:bg-gray-800 p-8 rounded-[32px] shadow-xl border dark:border-gray-700">
+               <h2 className="text-xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <i className="fas fa-lock text-red-500"></i> নিরাপত্তা পাসওয়ার্ড
+               </h2>
+               <div className="space-y-4">
+                 <input type="password" placeholder="নতুন পাসওয়ার্ড দিন" className="w-full p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-indigo-500 transition-all shadow-inner font-bold" value={newPass} onChange={e => setNewPass(e.target.value)} />
+                 <button onClick={() => onUpdatePassword(newPass)} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95">পাসওয়ার্ড আপডেট করুন</button>
+               </div>
+             </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">অধ্যক্ষর স্বাক্ষর</h2>
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="flex-shrink-0 w-48 h-24 bg-gray-50 dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden">
-                {principalSignature ? (
-                  <img src={principalSignature} alt="Principal Signature" className="max-w-full max-h-full object-contain" />
-                ) : (
-                  <span className="text-[10px] text-gray-400 font-bold uppercase">স্বাক্ষর নেই</span>
-                )}
-              </div>
-              <div className="flex-grow space-y-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">মার্কশিটে প্রদর্শনের জন্য অধ্যক্ষের স্বাক্ষর আপলোড করুন (PNG/JPG)। ব্যাকগ্রাউন্ড ছাড়া স্বাক্ষর দিলে ভালো দেখাবে।</p>
-                <button onClick={() => sigInputRef.current?.click()} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2">
-                  <i className="fas fa-upload"></i> স্বাক্ষর আপলোড করুন
-                </button>
-                <input type="file" ref={sigInputRef} className="hidden" accept="image/*" onChange={handleSigUpload} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100">বিষয় ম্যানেজমেন্ট</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
-              <select className="p-2.5 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl text-sm" value={subjectClass} onChange={e => setSubjectClass(e.target.value)}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-              <input placeholder="নতুন বিষয়ের নাম (একাধিক হলে কমা দিন)" className="md:col-span-2 p-2.5 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl text-sm border border-transparent focus:border-indigo-500" value={subjectInput} onChange={e => setSubjectInput(e.target.value)} />
-              <button onClick={handleSaveSubjects} className="bg-green-600 text-white p-2.5 rounded-xl font-bold text-sm">যোগ করুন</button>
-            </div>
-            
-            <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl">
-              <p className="text-[10px] font-black text-indigo-400 uppercase mb-3 tracking-widest">{subjectClass} শ্রেণীর বর্তমান বিষয়সমূহ:</p>
-              <div className="flex flex-wrap gap-2">
-                {(subjects[subjectClass] || []).length > 0 ? (subjects[subjectClass] || []).map(s => (
-                  <div key={s} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-3 py-1.5 rounded-full text-xs font-bold border dark:border-gray-600 flex items-center gap-2 group hover:border-indigo-500 transition-colors shadow-sm">
-                    <span className="cursor-pointer hover:text-indigo-600" onClick={() => setSubjectInput(s)} title="এডিট করতে ক্লিক করুন">{s}</span>
-                    <button onClick={() => handleDeleteSubject(subjectClass, s)} className="text-red-400 hover:text-red-600 transition-colors"><i className="fas fa-times-circle"></i></button>
-                  </div>
-                )) : (
-                  <span className="text-xs text-gray-400 italic">কোন বিষয় যোগ করা হয়নি</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeSubView === 'NOTICES' && (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h2 className="text-xl font-black mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <i className="fas fa-bullhorn text-amber-500"></i> {editingNoticeId ? 'নোটিশ সংশোধন' : 'নতুন নোটিশ বোর্ড'}
-            </h2>
-            <textarea 
-              placeholder="নোটিশের লেখাটি এখানে লিখুন..." 
-              className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none mb-4 text-sm border-2 border-transparent focus:border-indigo-500 transition-all shadow-inner" 
-              value={noticeInput} 
-              onChange={e => setNoticeInput(e.target.value)} 
-            />
-            <div className="flex gap-2">
-              <button 
-                onClick={handleAddNotice} 
-                disabled={isProcessing}
-                className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2"
-              >
-                {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-paper-plane"></i>}
-                {editingNoticeId ? 'আপডেট করুন' : 'পাবলিশ করুন'}
-              </button>
-              {editingNoticeId && (
-                <button 
-                  onClick={() => { setEditingNoticeId(null); setNoticeInput(''); }} 
-                  className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-6 py-3 rounded-xl font-bold text-sm"
-                >
-                  বাতিল
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700">
-            <h3 className="text-lg font-black mb-6 text-gray-900 dark:text-gray-100">প্রকাশিত নোটিশসমূহ ({notices.length})</h3>
-            <div className="space-y-4">
-              {notices.length > 0 ? notices.map(notice => (
-                <div key={notice.id} className="p-5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border dark:border-gray-600 group transition-all">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{notice.date}</span>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleEditNotice(notice)} 
-                        className="text-indigo-600 dark:text-indigo-400 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                        title="এডিট"
-                      >
-                        <i className="fas fa-edit text-xs"></i>
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteNotice(notice.id)} 
-                        className="text-red-500 dark:text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                        title="ডিলিট"
-                      >
-                        <i className="fas fa-trash-alt text-xs"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{notice.text}</p>
-                </div>
-              )) : (
-                <div className="text-center py-10 text-gray-400">
-                  <i className="fas fa-inbox text-4xl mb-3 block opacity-20"></i>
-                  <p className="text-sm font-bold">এখনো কোনো নোটিশ নেই</p>
-                </div>
-              )}
-            </div>
+             <div className="bg-white dark:bg-gray-800 p-8 rounded-[32px] shadow-xl border dark:border-gray-700">
+               <h2 className="text-xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <i className="fas fa-pen-nib text-indigo-500"></i> অধ্যক্ষের স্বাক্ষর
+               </h2>
+               <div className="flex flex-col items-center text-center space-y-4">
+                 <div className="w-full h-24 bg-gray-50 dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden shadow-inner">
+                    {principalSignature ? (
+                      <img src={principalSignature} alt="Principal Signature" className="max-w-full max-h-full object-contain p-2" />
+                    ) : (
+                      <span className="text-[10px] text-gray-400 font-black uppercase">স্বাক্ষর যোগ করা হয়নি</span>
+                    )}
+                 </div>
+                 <button onClick={() => sigInputRef.current?.click()} className="w-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 py-3.5 rounded-2xl font-black text-sm border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-all active:scale-95">
+                    <i className="fas fa-upload mr-2"></i> স্বাক্ষর আপলোড
+                 </button>
+                 <input type="file" ref={sigInputRef} className="hidden" accept="image/*" onChange={handleSigUpload} />
+               </div>
+             </div>
           </div>
         </div>
       )}
 
       {/* Edit Student Modal */}
       {editingStudent && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-scale-in">
-            <div className="bg-indigo-600 p-6 flex justify-between items-center text-white">
-              <div className="flex items-center gap-3">
-                <i className="fas fa-user-edit text-xl"></i>
-                <h3 className="font-black text-lg">শিক্ষার্থীর তথ্য সংশোধন</h3>
-              </div>
-              <button onClick={() => setEditingStudent(null)} className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-colors">
-                <i className="fas fa-times"></i>
-              </button>
-            </div>
-            
-            <form onSubmit={handleEditSubmit} className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">শিক্ষার্থীর নাম</label>
-                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.name} onChange={e => setEditingStudent({...editingStudent, name: e.target.value})} required />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">রোল নম্বর</label>
-                  <input type="number" className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.roll} onChange={e => setEditingStudent({...editingStudent, roll: e.target.value})} required />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">পিতার নাম</label>
-                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.fatherName} onChange={e => setEditingStudent({...editingStudent, fatherName: e.target.value})} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">মাতার নাম</label>
-                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.motherName} onChange={e => setEditingStudent({...editingStudent, motherName: e.target.value})} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">মোবাইল নম্বর</label>
-                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.mobile} onChange={e => setEditingStudent({...editingStudent, mobile: e.target.value})} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">গ্রাম/ঠিকানা</label>
-                  <input className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.village} onChange={e => setEditingStudent({...editingStudent, village: e.target.value})} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">শ্রেণী</label>
-                  <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.studentClass} onChange={e => setEditingStudent({...editingStudent, studentClass: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase ml-1">শিক্ষাবর্ষ</label>
-                  <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none font-bold text-sm" value={editingStudent.year} onChange={e => setEditingStudent({...editingStudent, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
-                </div>
-              </div>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+           <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-[40px] p-8 shadow-2xl animate-scale-in">
+              <h2 className="text-2xl font-black mb-6 text-indigo-900 dark:text-indigo-300">শিক্ষার্থীর তথ্য সংশোধন</h2>
+              <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {[
+                   { label: 'নাম', key: 'name' }, { label: 'রোল', key: 'roll' }, { label: 'পিতার নাম', key: 'fatherName' }, 
+                   { label: 'মাতার নাম', key: 'motherName' }, { label: 'মোবাইল', key: 'mobile' }, { label: 'গ্রাম', key: 'village' }
+                 ].map(field => (
+                   <div key={field.key} className="space-y-1">
+                      <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">{field.label}</label>
+                      <input 
+                        type="text" className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-sm"
+                        value={(editingStudent as any)[field.key]}
+                        onChange={e => setEditingStudent({...editingStudent, [field.key]: e.target.value})}
+                      />
+                   </div>
+                 ))}
+                 
+                 <div className="space-y-1">
+                    <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শ্রেণী</label>
+                    <select 
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-sm" 
+                      value={editingStudent.studentClass} 
+                      onChange={e => setEditingStudent({...editingStudent, studentClass: e.target.value})}
+                    >
+                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 
+                 <div className="space-y-1">
+                    <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শিক্ষাবর্ষ</label>
+                    <select 
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-sm" 
+                      value={editingStudent.year} 
+                      onChange={e => setEditingStudent({...editingStudent, year: e.target.value})}
+                    >
+                       {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                 </div>
 
-              <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setEditingStudent(null)} className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 py-3.5 rounded-2xl font-bold">বাতিল</button>
-                <button type="submit" disabled={isProcessing} className="flex-1 bg-indigo-600 text-white py-3.5 rounded-2xl font-black shadow-xl flex items-center justify-center gap-2">
-                  {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-check-circle"></i>} আপডেট করুন
-                </button>
-              </div>
-            </form>
-          </div>
+                 <div className="md:col-span-2 flex gap-3 mt-4">
+                    <button type="button" onClick={() => setEditingStudent(null)} className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-2xl font-black">বাতিল</button>
+                    <button type="submit" disabled={isProcessing} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">আপডেট করুন</button>
+                 </div>
+              </form>
+           </div>
         </div>
       )}
     </div>
