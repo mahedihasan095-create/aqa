@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Student, Result } from '../types';
 
@@ -59,6 +60,7 @@ const SchoolLogo = ({ size = "w-24 h-24", logo }: { size?: string, logo?: string
 const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects: classSubjectsMap, principalSignature, logo }) => {
   const [searchType, setSearchType] = useState<'BATCH' | 'INDIVIDUAL'>('INDIVIDUAL');
   const [batchFilter, setBatchFilter] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
+  const [batchSortBy, setBatchSortBy] = useState<'RANK' | 'ROLL'>('RANK');
   const [indivSearch, setIndivSearch] = useState({ roll: '', class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
   const [foundStudent, setFoundStudent] = useState<Student | null>(null);
   const [searched, setSearched] = useState(false);
@@ -293,10 +295,21 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                   <i className="fas fa-print"></i> প্রিন্ট করুন
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">শ্রেণী</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" value={batchFilter.class} onChange={e => setBatchFilter({...batchFilter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                 <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">সাল</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" value={batchFilter.year} onChange={e => setBatchFilter({...batchFilter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
                 <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">পরীক্ষা</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" value={batchFilter.exam} onChange={e => setBatchFilter({...batchFilter, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
+                <div>
+                  <label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">সাজানোর ধরণ</label>
+                  <select 
+                    className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold border-2 border-indigo-200 dark:border-indigo-800" 
+                    value={batchSortBy} 
+                    onChange={e => setBatchSortBy(e.target.value as 'RANK' | 'ROLL')}
+                  >
+                    <option value="RANK">মেধা ক্রম অনুযায়ী</option>
+                    <option value="ROLL">রোল নম্বর অনুযায়ী</option>
+                  </select>
+                </div>
               </div>
             </div>
             
@@ -332,6 +345,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                   </thead>
                   <tbody className="divide-y dark:divide-gray-700 text-gray-800 dark:text-gray-200">
                     {students.filter(s => s.studentClass === batchFilter.class && s.year === batchFilter.year).sort((a,b) => {
+                      if (batchSortBy === 'ROLL') {
+                        return parseInt(a.roll) - parseInt(b.roll);
+                      }
+                      
                       const resA = getSpecificResult(a.id, batchFilter.class, batchFilter.year, batchFilter.exam);
                       const resB = getSpecificResult(b.id, batchFilter.class, batchFilter.year, batchFilter.exam);
                       if (isAnnualView) {
