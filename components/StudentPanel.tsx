@@ -158,23 +158,28 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
 
           {searched && foundStudent && (
             getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
-              <div className="bg-white dark:bg-gray-800 p-6 md:p-10 rounded-[40px] shadow-2xl border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
-                 <div className="text-center mb-8 border-b-2 border-indigo-50 dark:border-indigo-900 pb-6 print-header">
-                   <div className="flex flex-col items-center justify-center mb-4">
-                     <SchoolLogo size="w-24 h-24 mb-2" logo={logo} />
-                     <h1 className="text-3xl md:text-5xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
+              <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[40px] shadow-2xl border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
+                 <div className="flex items-center gap-6 mb-4 border-b-2 border-indigo-50 dark:border-indigo-900 pb-4 print:pb-2 print:mb-2 print-header">
+                   <div className="shrink-0">
+                     <SchoolLogo size="w-16 h-16 md:w-20 md:h-20" logo={logo} />
                    </div>
-                   <div className="inline-block mt-3 bg-indigo-600 text-white px-8 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest">{indivSearch.exam} মূল্যায়নপত্র - {indivSearch.year}</div>
+                   <div className="flex-grow text-left">
+                     <h1 className="text-2xl md:text-4xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
+                     <p className="text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-400">কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর</p>
+                     <div className="inline-block mt-1 bg-indigo-600 text-white px-4 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                       {indivSearch.exam} মূল্যায়নপত্র - {indivSearch.year}
+                     </div>
+                   </div>
                  </div>
                  
-                 <div className="grid grid-cols-1 md:grid-cols-2 mb-8 gap-4 text-sm text-gray-800 dark:text-gray-200">
-                   <div className="space-y-2 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-2xl border dark:border-gray-600">
+                 <div className="grid grid-cols-2 mb-4 gap-3 text-[10px] md:text-xs text-gray-800 dark:text-gray-200">
+                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl border dark:border-gray-600">
                      <p><strong>নাম:</strong> {foundStudent.name}</p>
                      <p><strong>পিতা:</strong> {foundStudent.fatherName}</p>
                      <p><strong>মাতা:</strong> {foundStudent.motherName}</p>
                      <p><strong>গ্রাম:</strong> {foundStudent.village}</p>
                    </div>
-                   <div className="space-y-2 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-2xl border dark:border-gray-600">
+                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl border dark:border-gray-600">
                      <p><strong>রোল:</strong> {foundStudent.roll}</p>
                      <p><strong>শ্রেণী:</strong> {foundStudent.studentClass}</p>
                      <p><strong>শিক্ষাবর্ষ:</strong> {foundStudent.year}</p>
@@ -182,35 +187,35 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                    </div>
                  </div>
                  
-                 <div className="overflow-x-auto mb-6">
+                 <div className="overflow-x-auto mb-4">
                    <table className="w-full text-left border-collapse border border-gray-200 dark:border-gray-700 print-table">
-                     <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                     <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px] md:text-xs">
                        <tr>
-                         <th className="px-4 py-3 border border-gray-200 dark:border-gray-700">বিষয়ের নাম</th>
-                         <th className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center">পূর্ণমান</th>
-                         <th className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center">প্রাপ্ত নম্বর</th>
-                         <th className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center">গ্রেড</th>
+                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700">বিষয়ের নাম</th>
+                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">পূর্ণমান</th>
+                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">প্রাপ্ত নম্বর</th>
+                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">গ্রেড</th>
                        </tr>
                      </thead>
-                     <tbody className="text-gray-800 dark:text-gray-200">
+                     <tbody className="text-gray-800 dark:text-gray-200 text-[10px] md:text-xs">
                        {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks.map(m => (
                          <tr key={m.subjectName}>
-                           <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 font-bold">{m.subjectName}</td>
-                           <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center">১০০</td>
-                           <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center font-black text-indigo-700 dark:text-indigo-400">{m.marks}</td>
-                           <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center font-bold">
+                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 font-bold">{m.subjectName}</td>
+                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-center">১০০</td>
+                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-center font-black text-indigo-700 dark:text-indigo-400">{m.marks}</td>
+                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-center font-bold">
                              {m.marks >= 80 ? 'A+' : m.marks >= 70 ? 'A' : m.marks >= 60 ? 'A-' : m.marks >= 50 ? 'B' : m.marks >= 40 ? 'C' : m.marks >= 33 ? 'D' : 'F'}
                            </td>
                          </tr>
                        ))}
                      </tbody>
-                     <tfoot className="bg-indigo-50 dark:bg-indigo-900/20 font-black text-gray-900 dark:text-gray-100">
+                     <tfoot className="bg-indigo-50 dark:bg-indigo-900/20 font-black text-gray-900 dark:text-gray-100 text-[10px] md:text-xs">
                        <tr>
-                         <td colSpan={2} className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-right uppercase tracking-wider">চলতি পরীক্ষার মোট নম্বর:</td>
-                         <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center text-xl text-indigo-700 dark:text-indigo-300">
+                         <td colSpan={2} className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-right uppercase tracking-wider">চলতি পরীক্ষার মোট নম্বর:</td>
+                         <td className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center text-sm md:text-lg text-indigo-700 dark:text-indigo-300">
                            {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks}
                          </td>
-                         <td className="px-4 py-3 border border-gray-200 dark:border-gray-700 text-center">
+                         <td className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">
                            {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade}
                          </td>
                        </tr>
@@ -219,60 +224,60 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  </div>
 
                  {isAnnualView && (
-                   <div className="mt-8 border-t-2 border-indigo-100 dark:border-indigo-900 pt-6">
-                     <h3 className="text-lg font-black text-indigo-900 dark:text-indigo-300 mb-4 flex items-center gap-2">
+                   <div className="mt-4 border-t-2 border-indigo-100 dark:border-indigo-900 pt-3">
+                     <h3 className="text-xs md:text-sm font-black text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
                        <i className="fas fa-chart-line"></i> বার্ষিক সমন্বিত ফলাফল (৩ পরীক্ষা)
                      </h3>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                     <div className="grid grid-cols-4 gap-2">
                        {[
-                         { label: '১ম সাময়িক মোট', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).term1, color: 'indigo' },
-                         { label: '২য় সাময়িক মোট', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).term2, color: 'blue' },
-                         { label: 'বার্ষিক মোট', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).annual, color: 'purple' },
+                         { label: '১ম সাময়িক', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).term1, color: 'indigo' },
+                         { label: '২য় সাময়িক', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).term2, color: 'blue' },
+                         { label: 'বার্ষিক', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).annual, color: 'purple' },
                          { label: 'চূড়ান্ত গড়', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).average, color: 'green', isAvg: true }
                        ].map((item, idx) => (
-                         <div key={idx} className={`p-5 bg-${item.color}-50 dark:bg-${item.color}-900/20 border border-${item.color}-200 dark:border-${item.color}-800 rounded-3xl text-center shadow-sm`}>
-                            <span className={`text-[10px] font-black text-${item.color}-600 dark:text-${item.color}-400 block mb-1 uppercase`}>{item.label}</span>
-                            <span className={`font-black ${item.isAvg ? 'text-3xl' : 'text-2xl'} text-${item.color}-700 dark:text-${item.color}-300`}>{item.value}</span>
+                         <div key={idx} className={`p-2 bg-${item.color}-50 dark:bg-${item.color}-900/20 border border-${item.color}-200 dark:border-${item.color}-800 rounded-xl text-center shadow-sm`}>
+                            <span className={`text-[8px] font-black text-${item.color}-600 dark:text-${item.color}-400 block uppercase`}>{item.label}</span>
+                            <span className={`font-black ${item.isAvg ? 'text-sm md:text-lg' : 'text-xs md:text-sm'} text-${item.color}-700 dark:text-${item.color}-300`}>{item.value}</span>
                          </div>
                        ))}
                      </div>
                    </div>
                  )}
 
-                 <div className="mt-10 grid grid-cols-2 gap-4">
-                   <div className="p-5 bg-amber-50 dark:bg-amber-900/20 rounded-3xl border border-amber-200 dark:border-amber-800 text-center">
-                     <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 block mb-1 uppercase">শ্রেণীতে স্থান</span>
-                     <span className="font-black text-4xl text-amber-700 dark:text-amber-300">#{getRank(foundStudent.id)}</span>
+                 <div className="mt-6 grid grid-cols-2 gap-3">
+                   <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800 text-center">
+                     <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 block mb-1 uppercase">শ্রেণীতে স্থান</span>
+                     <span className="font-black text-2xl text-amber-700 dark:text-amber-300">#{getRank(foundStudent.id)}</span>
                    </div>
-                   <div className="p-5 bg-green-50 dark:bg-green-900/20 rounded-3xl border border-green-200 dark:border-green-800 text-center">
-                     <span className="text-[10px] font-black text-green-600 dark:text-green-400 block mb-1 uppercase">ফলাফল</span>
-                     <span className="font-black text-2xl text-green-700 dark:text-green-300">উত্তীর্ণ</span>
+                   <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-200 dark:border-green-800 text-center">
+                     <span className="text-[9px] font-black text-green-600 dark:text-green-400 block mb-1 uppercase">ফলাফল</span>
+                     <span className="font-black text-xl text-green-700 dark:text-green-300">উত্তীর্ণ</span>
                    </div>
                  </div>
 
-                 <div className="mt-16 flex justify-between items-end border-t-2 border-dashed dark:border-gray-700 pt-10 px-4 print-footer">
+                 <div className="mt-12 flex justify-between items-end border-t border-dashed dark:border-gray-700 pt-6 px-2 print-footer">
                    <div className="text-center">
-                     <div className="w-32 border-b border-gray-400 dark:border-gray-500 mb-2 mx-auto"></div>
-                     <p className="text-xs font-bold text-gray-500">অভিভাবক</p>
+                     <div className="w-24 border-b border-gray-400 dark:border-gray-500 mb-1 mx-auto"></div>
+                     <p className="text-[9px] font-bold text-gray-500">অভিভাবক</p>
                    </div>
                    <div className="text-center">
-                     <div className="w-32 border-b border-gray-400 dark:border-gray-500 mb-2 mx-auto"></div>
-                     <p className="text-xs font-bold text-gray-500">শ্রেণী শিক্ষক</p>
+                     <div className="w-24 border-b border-gray-400 dark:border-gray-500 mb-1 mx-auto"></div>
+                     <p className="text-[9px] font-bold text-gray-500">শ্রেণী শিক্ষক</p>
                    </div>
                    <div className="text-center relative">
                      {principalSignature && (
-                       <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-12 pointer-events-none">
+                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-8 pointer-events-none">
                          <img src={principalSignature} alt="Principal Signature" className="w-full h-full object-contain" />
                        </div>
                      )}
-                     <div className="w-32 border-b border-gray-400 dark:border-gray-500 mb-2 mx-auto"></div>
-                     <p className="text-xs font-bold text-indigo-700 dark:text-indigo-400">অধ্যক্ষ</p>
+                     <div className="w-24 border-b border-gray-400 dark:border-gray-500 mb-1 mx-auto"></div>
+                     <p className="text-[9px] font-bold text-indigo-700 dark:text-indigo-400">অধ্যক্ষ</p>
                    </div>
                  </div>
 
-                 <div className="no-print mt-10 flex justify-center gap-4">
-                   <button onClick={() => window.print()} className="bg-indigo-900 text-white px-10 py-4 rounded-2xl font-black shadow-xl flex items-center gap-2"><i className="fas fa-print"></i> প্রিন্ট মার্কশিট</button>
-                   <button onClick={() => setSearched(false)} className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-8 py-4 rounded-2xl font-bold">নতুন অনুসন্ধান</button>
+                 <div className="no-print mt-8 flex justify-center gap-4">
+                   <button onClick={() => window.print()} className="bg-indigo-900 text-white px-8 py-3 rounded-xl font-black shadow-xl flex items-center gap-2"><i className="fas fa-print"></i> প্রিন্ট মার্কশিট</button>
+                   <button onClick={() => setSearched(false)} className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-6 py-3 rounded-xl font-bold">নতুন অনুসন্ধান</button>
                  </div>
               </div>
             ) : (
