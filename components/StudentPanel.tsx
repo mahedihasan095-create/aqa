@@ -159,14 +159,12 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
           {searched && foundStudent && (
             getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
               <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[40px] shadow-2xl border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
-                 <div className="flex items-center gap-6 mb-4 border-b-2 border-indigo-50 dark:border-indigo-900 pb-4 print:pb-2 print:mb-2 print-header">
-                   <div className="shrink-0">
-                     <SchoolLogo size="w-16 h-16 md:w-20 md:h-20" logo={logo} />
-                   </div>
-                   <div className="flex-grow text-left">
+                 <div className="text-center mb-4 border-b-2 border-indigo-50 dark:border-indigo-900 pb-4 print:pb-2 print:mb-2 print-header">
+                   <div className="flex flex-col items-center justify-center">
+                     <SchoolLogo size="w-16 h-16 md:w-20 md:h-20 mb-2" logo={logo} />
                      <h1 className="text-2xl md:text-4xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
-                     <p className="text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-400">কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর</p>
-                     <div className="inline-block mt-1 bg-indigo-600 text-white px-4 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                     <p className="text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-400 mt-1">কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর</p>
+                     <div className="inline-block mt-2 bg-indigo-600 text-white px-6 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest">
                        {indivSearch.exam} মূল্যায়নপত্র - {indivSearch.year}
                      </div>
                    </div>
