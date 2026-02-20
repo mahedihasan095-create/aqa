@@ -274,6 +274,28 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const handleSaveSubjects = async () => {
+    if (!subjectInput.trim()) {
+      alert('অনুগ্রহ করে অন্তত একটি বিষয় প্রদান করুন।');
+      return;
+    }
+    const classSubjects = subjectInput.split(',').map(s => s.trim()).filter(s => s !== '');
+    setIsProcessing(true);
+    const success = await onSetSubjectsForClass(subjectClass, classSubjects);
+    if (success) {
+      alert('বিষয়সমূহ সফলভাবে আপডেট করা হয়েছে!');
+    }
+    setIsProcessing(false);
+  };
+
+  useEffect(() => {
+    if (subjects[subjectClass]) {
+      setSubjectInput(subjects[subjectClass].join(', '));
+    } else {
+      setSubjectInput('');
+    }
+  }, [subjectClass, subjects]);
+
   return (
     <div className="space-y-6">
       {/* Mobile-Friendly Sub-Navigation */}
@@ -626,6 +648,47 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {/* View: Settings */}
       {activeSubView === 'SETTINGS' && (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
+          {/* Subject Management */}
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+            <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
+               <i className="fas fa-book text-indigo-500"></i> শ্রেণী অনুযায়ী বিষয় ব্যবস্থাপনা
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শ্রেণী নির্বাচন করুন</label>
+                <select 
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
+                  value={subjectClass}
+                  onChange={e => setSubjectClass(e.target.value)}
+                >
+                  {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">বিষয়সমূহ (কমা দিয়ে লিখুন)</label>
+                <div className="flex gap-3">
+                  <input 
+                    type="text" 
+                    className="flex-grow p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
+                    placeholder="উদা: বাংলা, ইংরেজি, গণিত"
+                    value={subjectInput}
+                    onChange={e => setSubjectInput(e.target.value)}
+                  />
+                  <button 
+                    onClick={handleSaveSubjects}
+                    disabled={isProcessing}
+                    className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
+                  >
+                    {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-save"></i>} সংরক্ষণ
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="mt-4 text-[11px] text-gray-400 font-bold italic">
+              * বিষয়গুলো কমা (,) দিয়ে আলাদা করে লিখুন। যেমন: বাংলা, ইংরেজি, গণিত।
+            </p>
+          </div>
+
           {/* Logo Upload */}
           <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
             <h2 className="text-2xl font-black mb-8 text-gray-900 dark:text-gray-100 flex items-center gap-3">
