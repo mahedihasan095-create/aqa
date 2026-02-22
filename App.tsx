@@ -27,6 +27,16 @@ const App: React.FC = () => {
 
   const handleSupabaseError = (error: any, action: string) => {
     console.error(`Supabase Error (${action}):`, error);
+    
+    // Handle stale session/token errors
+    if (error.message?.includes('Refresh Token') || error.status === 400 || error.code === 'PGRST301') {
+      supabase.auth.signOut().then(() => {
+        setUser(null);
+        // Optionally reload or redirect if needed, but clearing state is usually enough
+      });
+      return; // Don't show alert for token errors as we're handling it by logging out
+    }
+
     if (error.code === '42501') {
       alert(`Error: পারমিশন ডিনাইড (RLS)! \nসুপাবেস ড্যাশবোর্ডে পলিসি সেট করুন।`);
     } else {
@@ -81,14 +91,32 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    // Check Current Auth Session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Auth session error:', error);
+          // If session is invalid, clear it
+          if (error.message.includes('Refresh Token') || error.status === 400) {
+            await supabase.auth.signOut();
+            setUser(null);
+          }
+        } else {
+          setUser(session?.user ?? null);
+        }
+      } catch (err) {
+        console.error('Unexpected auth error:', err);
+      }
+    };
+
+    initAuth();
 
     // Listen for Auth Changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
     });
 
     fetchAllData();

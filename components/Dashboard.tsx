@@ -13,6 +13,30 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices })
 
   return (
     <div className="max-w-5xl mx-auto space-y-4 animate-fade-in pb-10 px-2">
+      {/* Notice Marquee */}
+      {notices.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex items-center h-8 no-print">
+          <div className="bg-amber-500 text-white px-3 h-full flex items-center gap-1 shrink-0 z-10 shadow-[4px_0_8px_rgba(0,0,0,0.1)]">
+            <i className="fas fa-bullhorn text-[10px] animate-pulse"></i>
+            <span className="text-[10px] font-black whitespace-nowrap">নোটিশ:</span>
+          </div>
+          <div className="flex-grow overflow-hidden relative h-full flex items-center">
+            <div className="animate-marquee whitespace-nowrap py-1">
+              {notices.map((notice, idx) => (
+                <button
+                  key={notice.id}
+                  onClick={() => setSelectedNotice(notice)}
+                  className="text-[10px] font-bold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mx-4"
+                >
+                  {notice.text} <span className="text-amber-500 ml-1">({notice.date})</span>
+                  {idx !== notices.length - 1 && <span className="mx-4 text-gray-300 dark:text-gray-600">|</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section - Super Compressed */}
       <div className="bg-gradient-to-br from-indigo-900 to-indigo-700 dark:from-gray-800 dark:to-gray-900 p-4 md:p-6 rounded-[28px] shadow-xl relative overflow-hidden border border-white/10">
         <div className="relative z-10 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
