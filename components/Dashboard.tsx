@@ -15,23 +15,28 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices })
     <div className="max-w-5xl mx-auto space-y-4 animate-fade-in pb-10 px-2">
       {/* Notice Marquee */}
       {notices.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex items-center h-8 no-print">
-          <div className="bg-amber-500 text-white px-3 h-full flex items-center gap-1 shrink-0 z-10 shadow-[4px_0_8px_rgba(0,0,0,0.1)]">
-            <i className="fas fa-bullhorn text-[10px] animate-pulse"></i>
-            <span className="text-[10px] font-black whitespace-nowrap">নোটিশ:</span>
+        <div className="bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex items-center h-10 no-print">
+          <div className="bg-amber-500 text-white px-4 h-full flex items-center gap-1 shrink-0 z-10 shadow-[4px_0_8px_rgba(0,0,0,0.1)]">
+            <i className="fas fa-bullhorn text-xs animate-pulse"></i>
+            <span className="text-xs font-black whitespace-nowrap">নোটিশ:</span>
           </div>
           <div className="flex-grow overflow-hidden relative h-full flex items-center">
             <div className="animate-marquee whitespace-nowrap py-1">
-              {notices.map((notice, idx) => (
-                <button
-                  key={notice.id}
-                  onClick={() => setSelectedNotice(notice)}
-                  className="text-[10px] font-bold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mx-4"
-                >
-                  {notice.text} <span className="text-amber-500 ml-1">({notice.date})</span>
-                  {idx !== notices.length - 1 && <span className="mx-4 text-gray-300 dark:text-gray-600">|</span>}
-                </button>
-              ))}
+              {/* Double the notices for seamless looping */}
+              {[...notices, ...notices].map((notice, idx) => {
+                const isLong = notice.text.length > 60;
+                const displayMsg = isLong ? `${notice.text.substring(0, 60)}... বিস্তারিত` : notice.text;
+                return (
+                  <button
+                    key={`${notice.id}-${idx}`}
+                    onClick={() => setSelectedNotice(notice)}
+                    className="text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mx-6 flex items-center shrink-0"
+                  >
+                    {displayMsg} <span className="text-amber-500 ml-1">({notice.date})</span>
+                    <span className="mx-6 text-gray-300 dark:text-gray-600">|</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
