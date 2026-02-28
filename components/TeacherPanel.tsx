@@ -45,6 +45,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [subjectClass, setSubjectClass] = useState('প্রথম');
   const [subjectInput, setSubjectInput] = useState('');
   const [noticeInput, setNoticeInput] = useState('');
+  const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
   const [studentFilterClass, setStudentFilterClass] = useState('সব');
 
@@ -199,18 +200,34 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   const handleAddNotice = async () => {
     if (!noticeInput.trim()) return;
-    const newNotice: Notice = {
-      id: Date.now().toString(),
-      text: noticeInput,
-      date: new Date().toLocaleDateString('bn-BD')
-    };
+    
+    let updatedNotices: Notice[];
+    if (editingNoticeId) {
+      updatedNotices = notices.map(n => 
+        n.id === editingNoticeId ? { ...n, text: noticeInput } : n
+      );
+    } else {
+      const newNotice: Notice = {
+        id: Date.now().toString(),
+        text: noticeInput,
+        date: new Date().toLocaleDateString('bn-BD')
+      };
+      updatedNotices = [newNotice, ...notices];
+    }
+
     setIsProcessing(true);
-    const success = await onUpdateNotices([newNotice, ...notices]);
+    const success = await onUpdateNotices(updatedNotices);
     if (success) {
       setNoticeInput('');
-      alert('নোটিশ যোগ করা হয়েছে।');
+      setEditingNoticeId(null);
+      alert(editingNoticeId ? 'নোটিশ আপডেট করা হয়েছে।' : 'নোটিশ যোগ করা হয়েছে।');
     }
     setIsProcessing(false);
+  };
+
+  const handleEditNotice = (notice: Notice) => {
+    setNoticeInput(notice.text);
+    setEditingNoticeId(notice.id);
   };
 
   const handleDeleteNotice = async (id: string) => {
@@ -615,16 +632,25 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                       <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mb-2 inline-block">{notice.date}</span>
                       <p className="font-bold text-gray-800 dark:text-gray-200">{notice.text}</p>
                    </div>
-                   <button onClick={() => handleDeleteNotice(notice.id)} className="p-3 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600"><i className="fas fa-trash"></i></button>
+                   <div className="flex gap-1">
+                      <button onClick={() => handleEditNotice(notice)} className="p-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-indigo-600"><i className="fas fa-edit"></i></button>
+                      <button onClick={() => handleDeleteNotice(notice.id)} className="p-3 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600"><i className="fas fa-trash"></i></button>
+                   </div>
                 </div>
               ))}
               {notices.length === 0 && <div className="p-20 text-center text-gray-400 font-bold bg-white dark:bg-gray-800 rounded-3xl">কোনো নোটিশ নেই।</div>}
            </div>
            
            <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700 h-fit">
-              <h3 className="text-xl font-black mb-6 flex items-center gap-2">
-                 <i className="fas fa-plus-circle text-indigo-500"></i> নতুন নোটিশ
-              </h3>
+              <div className="flex justify-between items-center mb-6">
+                 <h3 className="text-xl font-black flex items-center gap-2">
+                    <i className={`fas ${editingNoticeId ? 'fa-edit' : 'fa-plus-circle'} text-indigo-500`}></i> 
+                    {editingNoticeId ? 'নোটিশ এডিট করুন' : 'নতুন নোটিশ'}
+                 </h3>
+                 {editingNoticeId && (
+                   <button onClick={() => { setEditingNoticeId(null); setNoticeInput(''); }} className="text-xs font-bold text-red-500 hover:underline">বাতিল করুন</button>
+                 )}
+              </div>
               <textarea 
                 className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-indigo-600 h-40 resize-none mb-4"
                 placeholder="এখানে নোটিশটি লিখুন..."
@@ -632,7 +658,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 onChange={e => setNoticeInput(e.target.value)}
               />
               <button onClick={handleAddNotice} disabled={isProcessing} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
-                 {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-paper-plane"></i>} নোটিশ পাবলিশ করুন
+                 {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className={`fas ${editingNoticeId ? 'fa-save' : 'fa-paper-plane'}`}></i>} 
+                 {editingNoticeId ? ' আপডেট করুন' : ' নোটিশ পাবলিশ করুন'}
               </button>
            </div>
         </div>
