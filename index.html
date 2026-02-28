@@ -135,6 +135,27 @@
         .animate-loading-bar {
             animation: loading-bar 1.5s infinite linear;
         }
+
+        @keyframes student-run {
+            0% { transform: translateX(-20px) translateY(0); }
+            25% { transform: translateX(0) translateY(-5px); }
+            50% { transform: translateX(20px) translateY(0); }
+            75% { transform: translateX(0) translateY(-5px); }
+            100% { transform: translateX(-20px) translateY(0); }
+        }
+        .animate-student-run {
+            animation: student-run 1.2s infinite ease-in-out;
+        }
+
+        @keyframes ground-move {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-40px); }
+        }
+        .animate-ground {
+            background-image: linear-gradient(to right, #e5e7eb 2px, transparent 2px);
+            background-size: 40px 100%;
+            animation: ground-move 0.8s infinite linear;
+        }
     </style>
 <script type="importmap">
 {

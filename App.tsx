@@ -176,35 +176,55 @@ const App: React.FC = () => {
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
         {!isDataInitialized ? (
           <div className="flex flex-col items-center justify-center py-32">
-            <div className="relative">
-              {/* Outer pulsing ring */}
-              <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping scale-150"></div>
-              {/* Inner pulsing circle */}
-              <div className="absolute inset-0 rounded-full bg-indigo-600/10 animate-pulse-soft scale-125"></div>
+            <div className="relative w-64 h-48 flex flex-col items-center justify-center">
+              {/* Academy Building in Background */}
+              <div className="absolute top-0 opacity-10 dark:opacity-5">
+                <i className="fas fa-school text-[120px] text-indigo-900 dark:text-white"></i>
+              </div>
               
-              {/* Central Icon Container */}
-              <div className="relative bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border border-indigo-100 dark:border-gray-700 flex items-center justify-center">
-                <div className="w-16 h-16 flex items-center justify-center">
-                  <i className="fas fa-book-quran text-5xl text-indigo-600 animate-float"></i>
+              {/* Running Student Animation */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="animate-student-run">
+                  <div className="relative">
+                    <i className="fas fa-user-graduate text-6xl text-indigo-600 drop-shadow-lg"></i>
+                    {/* Backpack detail */}
+                    <div className="absolute -left-1 top-4 w-3 h-6 bg-indigo-800 rounded-full opacity-40"></div>
+                  </div>
                 </div>
                 
-                {/* Spinning loader around the icon */}
-                <div className="absolute inset-0 border-4 border-transparent border-t-indigo-600 border-r-indigo-600 rounded-[40px] animate-spin"></div>
+                {/* Moving Ground Effect */}
+                <div className="mt-2 w-40 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                  <div className="absolute inset-0 animate-ground opacity-50"></div>
+                </div>
+              </div>
+
+              {/* Floating Books/Knowledge Icons */}
+              <div className="absolute top-4 right-4 animate-bounce delay-100">
+                <i className="fas fa-book text-indigo-400/40 text-xl"></i>
+              </div>
+              <div className="absolute bottom-12 left-4 animate-bounce delay-300">
+                <i className="fas fa-pencil-alt text-amber-400/40 text-xl"></i>
               </div>
             </div>
             
-            <div className="mt-12 text-center space-y-2">
-              <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300 animate-pulse">
-                আনওয়ারুল কুরআন একাডেমী
-              </h2>
-              <p className="text-sm font-bold text-gray-400 uppercase tracking-[3px] animate-pulse">
-                ডাটা লোড হচ্ছে...
+            <div className="mt-12 text-center space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <div className="h-px w-8 bg-indigo-200 dark:bg-indigo-900"></div>
+                <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">
+                  আনওয়ারুল কুরআন একাডেমী
+                </h2>
+                <div className="h-px w-8 bg-indigo-200 dark:bg-indigo-900"></div>
+              </div>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-[4px] flex items-center justify-center gap-2">
+                <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+                জ্ঞানের পথে যাত্রা...
+                <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-75"></span>
               </p>
             </div>
             
             {/* Progress bar simulation */}
-            <div className="mt-8 w-48 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden border dark:border-gray-700 relative">
-              <div className="absolute inset-0 bg-indigo-600/30 rounded-full animate-loading-bar w-1/2"></div>
+            <div className="mt-10 w-56 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden border dark:border-gray-700 relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-indigo-700 rounded-full animate-loading-bar w-1/3"></div>
             </div>
           </div>
         ) : view === 'DASHBOARD' ? (
