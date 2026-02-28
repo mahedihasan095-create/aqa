@@ -284,17 +284,10 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const success = await onSetSubjectsForClass(subjectClass, classSubjects);
     if (success) {
       alert('বিষয়সমূহ সফলভাবে আপডেট করা হয়েছে!');
+      setSubjectInput(''); // Clear input after success
     }
     setIsProcessing(false);
   };
-
-  useEffect(() => {
-    if (subjects[subjectClass]) {
-      setSubjectInput(subjects[subjectClass].join(', '));
-    } else {
-      setSubjectInput('');
-    }
-  }, [subjectClass, subjects]);
 
   return (
     <div className="space-y-6">
@@ -687,6 +680,24 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             <p className="mt-4 text-[11px] text-gray-400 font-bold italic">
               * বিষয়গুলো কমা (,) দিয়ে আলাদা করে লিখুন। যেমন: বাংলা, ইংরেজি, গণিত।
             </p>
+
+            {/* Display Current Subjects */}
+            <div className="mt-8 pt-8 border-t dark:border-gray-700">
+              <h3 className="text-sm font-black mb-4 text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <i className="fas fa-list-ul"></i> {subjectClass} শ্রেণীর বর্তমান বিষয়সমূহ:
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {subjects[subjectClass] && subjects[subjectClass].length > 0 ? (
+                  subjects[subjectClass].map((sub, i) => (
+                    <span key={i} className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-xl text-sm font-bold border border-indigo-100 dark:border-indigo-800 animate-fade-in">
+                      {sub}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-400 font-bold italic">কোনো বিষয় সেট করা নেই।</p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Logo Upload */}
