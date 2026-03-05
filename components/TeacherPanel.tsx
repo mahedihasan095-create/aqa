@@ -131,6 +131,48 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     XLSX.writeFile(wb, `Result_Entry_Sample_${entryConfig.class}.xlsx`);
   };
 
+  const downloadStudentsExcel = () => {
+    const data = filteredStudents.map(s => ({
+      'রোল': s.roll,
+      'নাম': s.name,
+      'শ্রেণী': s.studentClass,
+      'পিতার নাম': s.fatherName,
+      'মাতার নাম': s.motherName,
+      'মোবাইল': s.mobile,
+      'গ্রাম': s.village,
+      'সাল': s.year
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.writeFile(wb, `Students_List_${studentFilterClass}.xlsx`);
+  };
+
+  const downloadResultsExcel = () => {
+    const data = results.map(r => {
+      const student = students.find(s => s.id === r.studentId);
+      const marksObj: Record<string, number> = {};
+      r.marks.forEach(m => {
+        marksObj[m.subjectName] = m.marks;
+      });
+      return {
+        'রোল': student?.roll || '',
+        'নাম': student?.name || '',
+        'শ্রেণী': r.class,
+        'পরীক্ষা': r.examName,
+        'সাল': r.year,
+        ...marksObj,
+        'মোট নম্বর': r.totalMarks,
+        'গ্রেড': r.grade,
+        'অবস্থা': r.isPublished ? 'পাবলিশড' : 'ড্রাফট'
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Results");
+    XLSX.writeFile(wb, "Results_Data.xlsx");
+  };
+
   const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.roll) {
@@ -341,6 +383,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
              <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শিক্ষার্থী তালিকা ({filteredStudents.length})</h2>
                 <div className="flex gap-2 w-full md:w-auto">
+                   <button 
+                     onClick={downloadStudentsExcel}
+                     className="p-2.5 rounded-xl border border-green-200 bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm"
+                     title="এক্সেল ডাউনলোড করুন"
+                   >
+                     <i className="fas fa-file-excel"></i> <span className="hidden sm:inline">ডাউনলোড</span>
+                   </button>
                    <select className="p-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
                       <option value="সব">সব শ্রেণী</option>
                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -571,7 +620,15 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {activeSubView === 'MANAGE_RESULTS' && (
         <div className="animate-fade-in space-y-4">
            <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-2xl border dark:border-gray-700">
-              <h2 className="text-2xl font-black mb-6 text-indigo-900 dark:text-indigo-300">রেজাল্ট পাবলিশ ম্যানেজমেন্ট</h2>
+              <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">রেজাল্ট পাবলিশ ম্যানেজমেন্ট</h2>
+                 <button 
+                   onClick={downloadResultsExcel}
+                   className="p-2.5 rounded-xl border border-green-200 bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm w-full md:w-auto justify-center"
+                 >
+                   <i className="fas fa-file-excel"></i> এক্সেল ডাউনলোড করুন
+                 </button>
+              </div>
               <div className="overflow-x-auto">
                  <table className="w-full text-left border-collapse">
                     <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-400">
