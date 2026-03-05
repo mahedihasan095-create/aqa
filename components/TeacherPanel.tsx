@@ -47,6 +47,59 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [noticeInput, setNoticeInput] = useState('');
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
+
+  const groupedResults = useMemo(() => {
+    const groups: Record<string, { class: string, year: string, examName: string, results: Result[], isPublished: boolean, totalStudents: number }> = {};
+    results.forEach(res => {
+      const key = `${res.class}|${res.year}|${res.examName}`;
+      if (!groups[key]) {
+        groups[key] = {
+          class: res.class,
+          year: res.year,
+          examName: res.examName,
+          results: [],
+          isPublished: true,
+          totalStudents: 0
+        };
+      }
+      groups[key].results.push(res);
+      if (!res.isPublished) groups[key].isPublished = false;
+    });
+    
+    // Count students per class to show coverage
+    Object.keys(groups).forEach(key => {
+      const className = groups[key].class;
+      groups[key].totalStudents = students.filter(s => s.studentClass === className).length;
+    });
+
+    return Object.entries(groups).map(([key, value]) => ({ key, ...value }))
+      .sort((a, b) => b.year.localeCompare(a.year) || a.class.localeCompare(b.class));
+  }, [results, students]);
+
+  const handleTogglePublishGroup = async (key: string, currentStatus: boolean) => {
+    const group = groupedResults.find(g => g.key === key);
+    if (!group) return;
+    setIsProcessing(true);
+    const updatedResults = group.results.map(r => ({ ...r, isPublished: !currentStatus }));
+    await onSaveResults(updatedResults);
+    setIsProcessing(false);
+  };
+
+  const handleDeleteGroup = async (key: string) => {
+    if (!confirm('আপনি কি এই গ্রুপের সকল রেজাল্ট মুছতে চান?')) return;
+    const group = groupedResults.find(g => g.key === key);
+    if (!group) return;
+    setIsProcessing(true);
+    // We need to delete one by one or have a bulk delete. 
+    // Since onSaveResults is bulk, maybe we can use it if the backend supports it, 
+    // but onDeleteResult is single. Let's use single for now or check if we can add bulk delete.
+    // For now, let's just do single deletes in a loop.
+    for (const res of group.results) {
+      await onDeleteResult(res.id);
+    }
+    setIsProcessing(false);
+  };
+
   const [studentFilterClass, setStudentFilterClass] = useState('সব');
 
   const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
@@ -633,44 +686,40 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  <table className="w-full text-left border-collapse">
                     <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-400">
                        <tr>
-                          <th className="p-4">রোল ও শিক্ষার্থীর নাম</th>
                           <th className="p-4">শ্রেণী ও সাল</th>
                           <th className="p-4">পরীক্ষার নাম</th>
-                          <th className="p-4 text-center">প্রাপ্ত নম্বর</th>
+                          <th className="p-4 text-center">শিক্ষার্থী সংখ্যা</th>
                           <th className="p-4 text-center">অবস্থা</th>
                           <th className="p-4 text-center">অ্যাকশন</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y dark:divide-gray-700">
-                       {results.sort((a,b) => b.year.localeCompare(a.year)).map(res => {
-                          const student = students.find(s => s.id === res.studentId);
+                       {groupedResults.map(group => {
                           return (
-                            <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                               <td className="p-4">
-                                  <div className="font-bold">{student?.name || 'অজানা'}</div>
-                                  <div className="text-[10px] text-gray-400 font-black uppercase">রোল: {student?.roll}</div>
+                            <tr key={group.key} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                               <td className="p-4 text-sm font-bold">{group.class} ({group.year})</td>
+                               <td className="p-4 text-sm font-bold text-indigo-600">{group.examName}</td>
+                               <td className="p-4 text-center font-black">
+                                  <span className="text-indigo-600">{group.results.length}</span> / {group.totalStudents}
                                </td>
-                               <td className="p-4 text-sm font-medium">{res.class} ({res.year})</td>
-                               <td className="p-4 text-sm font-bold text-indigo-600">{res.examName}</td>
-                               <td className="p-4 text-center font-black">{res.totalMarks} ({res.grade})</td>
                                <td className="p-4 text-center">
-                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${res.isPublished ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
-                                     {res.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
+                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${group.isPublished ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                     {group.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
                                   </span>
                                </td>
                                <td className="p-4 text-center">
                                   <div className="flex justify-center gap-2">
-                                     <button onClick={() => handleTogglePublish(res.id)} className={`p-2 rounded-lg transition-colors ${res.isPublished ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'}`} title={res.isPublished ? "আনপাবলিশ করুন" : "পাবলিশ করুন"}>
-                                        <i className={`fas ${res.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                     <button onClick={() => handleTogglePublishGroup(group.key, group.isPublished)} className={`p-2 rounded-lg transition-colors ${group.isPublished ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'}`} title={group.isPublished ? "সব আনপাবলিশ করুন" : "সব পাবলিশ করুন"}>
+                                        <i className={`fas ${group.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                      </button>
-                                     <button onClick={() => onDeleteResult(res.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><i className="fas fa-trash"></i></button>
+                                     <button onClick={() => handleDeleteGroup(group.key)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="সব মুছুন"><i className="fas fa-trash"></i></button>
                                   </div>
                                </td>
                             </tr>
                           );
                        })}
-                       {results.length === 0 && (
-                         <tr><td colSpan={6} className="p-20 text-center text-gray-400 font-bold">কোনো রেজাল্ট পাওয়া যায়নি।</td></tr>
+                       {groupedResults.length === 0 && (
+                         <tr><td colSpan={5} className="p-20 text-center text-gray-400 font-bold">কোনো রেজাল্ট পাওয়া যায়নি।</td></tr>
                        )}
                     </tbody>
                  </table>
