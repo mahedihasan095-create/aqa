@@ -226,6 +226,27 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     XLSX.writeFile(wb, "Results_Data.xlsx");
   };
 
+  const downloadAllDataJSON = () => {
+    const allData = {
+      students,
+      results,
+      subjects,
+      notices,
+      principalSignature,
+      schoolLogo,
+      exportDate: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `School_Management_Backup_${new Date().toLocaleDateString('bn-BD')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.roll) {
@@ -774,6 +795,22 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {/* View: Settings */}
       {activeSubView === 'SETTINGS' && (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
+          {/* Backup & Export Section */}
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+            <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
+               <i className="fas fa-database text-indigo-500"></i> ব্যাকআপ ও এক্সপোর্ট
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-bold">
+              আপনার অ্যাপের সকল তথ্য (শিক্ষার্থী, রেজাল্ট, নোটিশ, সেটিংস) একটি JSON ফাইল হিসেবে ডাউনলোড করে রাখুন। পরবর্তীতে এটি ব্যাকআপ হিসেবে ব্যবহার করা যাবে।
+            </p>
+            <button 
+              onClick={downloadAllDataJSON}
+              className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3"
+            >
+              <i className="fas fa-download"></i> সম্পূর্ণ ডাটা JSON ডাউনলোড করুন
+            </button>
+          </div>
+
           {/* Subject Management */}
           <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
             <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">

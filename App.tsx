@@ -16,6 +16,8 @@ const App: React.FC = () => {
   const [isDataInitialized, setIsDataInitialized] = useState<boolean>(false);
   const [principalSignature, setPrincipalSignature] = useState<string>('');
   const [schoolLogo, setSchoolLogo] = useState<string>('');
+  const [dailyVisits, setDailyVisits] = useState<number>(0);
+  const [totalVisits, setTotalVisits] = useState<number>(0);
   
   // Supabase Auth State
   const [user, setUser] = useState<any>(null);
@@ -90,6 +92,49 @@ const App: React.FC = () => {
     }
   };
 
+  const trackVisit = async () => {
+    if (!supabase) return;
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    
+    try {
+      // Fetch current stats from app_settings
+      const { data: settingsData } = await supabase.from('app_settings').select('*');
+      const statsSetting = settingsData?.find(s => s.key === 'visitor_stats');
+      
+      let stats = { total: 0, daily: {} as Record<string, number> };
+      if (statsSetting && statsSetting.value) {
+        try {
+          stats = JSON.parse(statsSetting.value);
+        } catch (e) {
+          console.error('Error parsing visitor stats:', e);
+        }
+      }
+
+      // Check if we already counted this session
+      const sessionCounted = sessionStorage.getItem('visit_counted');
+      
+      if (!sessionCounted) {
+        stats.total = (stats.total || 0) + 1;
+        stats.daily[today] = (stats.daily[today] || 0) + 1;
+        
+        // Keep only last 30 days of daily stats to keep the JSON small
+        const dates = Object.keys(stats.daily).sort();
+        if (dates.length > 30) {
+          const toDelete = dates.slice(0, dates.length - 30);
+          toDelete.forEach(d => delete stats.daily[d]);
+        }
+
+        await supabase.from('app_settings').upsert({ key: 'visitor_stats', value: JSON.stringify(stats) });
+        sessionStorage.setItem('visit_counted', 'true');
+      }
+
+      setDailyVisits(stats.daily[today] || 0);
+      setTotalVisits(stats.total || 0);
+    } catch (err) {
+      console.error('Visit tracking error:', err);
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -120,6 +165,7 @@ const App: React.FC = () => {
     });
 
     fetchAllData();
+    trackVisit();
     const savedDarkMode = localStorage.getItem('school_dark_mode');
     if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode) === true);
 
@@ -365,13 +411,27 @@ const App: React.FC = () => {
       
       <footer className="bg-white dark:bg-gray-950 border-t dark:border-white/5 py-12 no-print">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-[10px] font-black text-gray-400 uppercase tracking-[2px]">
-          <div className="mb-4 md:mb-0 flex items-center gap-4">
+          <div className="mb-6 md:mb-0 flex items-center gap-4">
              <div className="w-8 h-8 bg-indigo-600/10 rounded-lg flex items-center justify-center">
                 <i className="fas fa-code text-indigo-600"></i>
              </div>
              Powered by <span className="text-indigo-600">Internet Seba</span>
           </div>
-          <div>&copy; {new Date().getFullYear()} আনওয়ারুল কুরআন একাডেমী</div>
+          
+          <div className="flex flex-col items-center md:items-end gap-4">
+            <div className="flex items-center gap-4 text-[9px] font-bold text-gray-500 bg-gray-50 dark:bg-gray-900/50 px-5 py-2.5 rounded-full border dark:border-white/5 shadow-inner">
+              <div className="flex items-center gap-2">
+                <i className="fas fa-calendar-day text-indigo-500"></i>
+                আজকের ভিজিটর: <span className="text-indigo-600 dark:text-indigo-400 text-xs">{dailyVisits}</span>
+              </div>
+              <div className="w-px h-3 bg-gray-300 dark:bg-gray-700"></div>
+              <div className="flex items-center gap-2">
+                <i className="fas fa-users text-indigo-500"></i>
+                সর্বমোট ভিজিটর: <span className="text-indigo-600 dark:text-indigo-400 text-xs">{totalVisits}</span>
+              </div>
+            </div>
+            <div>&copy; {new Date().getFullYear()} আনওয়ারুল কুরআন একাডেমী</div>
+          </div>
         </div>
       </footer>
     </div>
