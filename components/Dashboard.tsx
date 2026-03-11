@@ -6,10 +6,21 @@ interface DashboardProps {
   setView: (view: ViewType) => void;
   studentCount: number;
   notices: Notice[];
+  slideshowImages?: {url: string, title: string}[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices }) => {
+const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, slideshowImages = [] }) => {
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  React.useEffect(() => {
+    if (slideshowImages.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentSlide(prev => (prev + 1) % slideshowImages.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [slideshowImages.length]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-4 animate-fade-in pb-10 px-2">
@@ -39,6 +50,72 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices })
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Slideshow Section */}
+      {slideshowImages.length > 0 && (
+        <div className="relative w-full aspect-[2/1] md:aspect-[2.5/1] rounded-[32px] overflow-hidden shadow-2xl border dark:border-white/10 group bg-gray-200 dark:bg-gray-800">
+          {slideshowImages.map((slide, idx) => (
+            <div 
+              key={idx}
+              className={`absolute inset-0 transition-all duration-1000 ease-in-out transform ${
+                idx === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+              }`}
+            >
+              <img 
+                src={slide.url} 
+                alt={slide.title || `Slide ${idx + 1}`} 
+                className="w-full h-full object-cover object-center"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+              
+              {/* Animated Title */}
+              {slide.title && (
+                <div className={`absolute bottom-10 left-0 right-0 px-6 md:px-12 transition-all duration-700 delay-300 transform ${
+                  idx === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+                }`}>
+                  <h2 className="text-white text-lg md:text-3xl font-black drop-shadow-lg text-center md:text-left">
+                    {slide.title}
+                  </h2>
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {/* Slide Indicators */}
+          {slideshowImages.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+              {slideshowImages.map((_, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === currentSlide ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/60'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Navigation Arrows */}
+          {slideshowImages.length > 1 && (
+            <>
+              <button 
+                onClick={() => setCurrentSlide(prev => (prev - 1 + slideshowImages.length) % slideshowImages.length)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-md text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40"
+              >
+                <i className="fas fa-chevron-left"></i>
+              </button>
+              <button 
+                onClick={() => setCurrentSlide(prev => (prev + 1) % slideshowImages.length)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/20 backdrop-blur-md text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/40"
+              >
+                <i className="fas fa-chevron-right"></i>
+              </button>
+            </>
+          )}
         </div>
       )}
 

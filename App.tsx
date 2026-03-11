@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [isDataInitialized, setIsDataInitialized] = useState<boolean>(false);
   const [principalSignature, setPrincipalSignature] = useState<string>('');
   const [schoolLogo, setSchoolLogo] = useState<string>('');
+  const [slideshowImages, setSlideshowImages] = useState<{url: string, title: string}[]>([]);
   const [dailyVisits, setDailyVisits] = useState<number>(0);
   const [totalVisits, setTotalVisits] = useState<number>(0);
   
@@ -82,8 +83,23 @@ const App: React.FC = () => {
       if (settingsData) {
         const sigSetting = settingsData.find(s => s.key === 'principal_signature');
         const logoSetting = settingsData.find(s => s.key === 'school_logo');
+        const slideshowSetting = settingsData.find(s => s.key === 'slideshow_images');
+        
         if (sigSetting) setPrincipalSignature(sigSetting.value);
         if (logoSetting) setSchoolLogo(logoSetting.value);
+        if (slideshowSetting && slideshowSetting.value) {
+          try {
+            const parsed = JSON.parse(slideshowSetting.value);
+            // Migration: if it's an array of strings, convert to objects
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
+              setSlideshowImages(parsed.map((url: string) => ({ url, title: '' })));
+            } else {
+              setSlideshowImages(parsed);
+            }
+          } catch (e) {
+            console.error('Error parsing slideshow images:', e);
+          }
+        }
       }
     } catch (error) {
       console.error('Data fetch error:', error);
@@ -274,12 +290,24 @@ const App: React.FC = () => {
             </div>
           </div>
         ) : view === 'DASHBOARD' ? (
-          <Dashboard setView={(v) => (v === 'TEACHER_DASHBOARD' && !user) ? setShowLoginModal(true) : setView(v)} studentCount={students.length} notices={notices} />
+          <Dashboard 
+            setView={(v) => (v === 'TEACHER_DASHBOARD' && !user) ? setShowLoginModal(true) : setView(v)} 
+            studentCount={students.length} 
+            notices={notices} 
+            slideshowImages={slideshowImages}
+          />
         ) : view === 'TEACHER_DASHBOARD' ? (
           <TeacherPanel 
             students={students} results={results} subjects={subjects} notices={notices}
             principalSignature={principalSignature}
             schoolLogo={schoolLogo}
+            slideshowImages={slideshowImages}
+            onUpdateSlideshowImages={async (images: {url: string, title: string}[]) => {
+              const { error } = await supabase!.from('app_settings').upsert({ key: 'slideshow_images', value: JSON.stringify(images) });
+              if (!error) { setSlideshowImages(images); return true; }
+              handleSupabaseError(error, 'Slideshow Update');
+              return false;
+            }}
             onSetSubjectsForClass={async (className, classSubjects) => {
               const { error } = await supabase!.from('subjects').upsert({ class: className, subjects: classSubjects }, { onConflict: 'class' });
               if (!error) { setSubjects(prev => ({ ...prev, [className]: classSubjects })); return true; }

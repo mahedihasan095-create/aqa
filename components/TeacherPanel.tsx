@@ -10,6 +10,7 @@ interface TeacherPanelProps {
   notices: Notice[];
   principalSignature?: string;
   schoolLogo?: string;
+  slideshowImages?: {url: string, title: string}[];
   onSetSubjectsForClass: (className: string, classSubjects: string[]) => Promise<boolean>;
   onAddStudent: (s: Student) => Promise<boolean>;
   onAddStudents?: (list: Student[]) => Promise<boolean>;
@@ -22,6 +23,7 @@ interface TeacherPanelProps {
   onUpdatePassword: (newPass: string) => void;
   onUpdatePrincipalSignature: (signatureBase64: string) => Promise<boolean>;
   onUpdateSchoolLogo: (logoBase64: string) => Promise<boolean>;
+  onUpdateSlideshowImages?: (images: {url: string, title: string}[]) => Promise<boolean>;
   currentPassword: string;
 }
 
@@ -30,9 +32,9 @@ const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
-  students, results, subjects, notices, principalSignature, schoolLogo, onSetSubjectsForClass, onAddStudent, onAddStudents,
+  students, results, subjects, notices, principalSignature, schoolLogo, slideshowImages = [], onSetSubjectsForClass, onAddStudent, onAddStudents,
   onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
-  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, currentPassword 
+  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, onUpdateSlideshowImages, currentPassword 
 }) => {
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('STUDENT_LIST');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -40,6 +42,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const resultExcelRef = useRef<HTMLInputElement>(null);
   const sigInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const slideshowInputRef = useRef<HTMLInputElement>(null);
   
   const [newPass, setNewPass] = useState('');
   const [subjectClass, setSubjectClass] = useState('প্রথম');
@@ -405,6 +408,43 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => onUpdateSchoolLogo(evt.target?.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleSlideshowUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (slideshowImages.length >= 4) {
+      alert('সর্বোচ্চ ৪টি ছবি আপলোড করা যাবে।');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64 = evt.target?.result as string;
+      if (onUpdateSlideshowImages) {
+        setIsProcessing(true);
+        await onUpdateSlideshowImages([...slideshowImages, { url: base64, title: '' }]);
+        setIsProcessing(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdateSlideTitle = async (index: number, title: string) => {
+    if (onUpdateSlideshowImages) {
+      const newImages = [...slideshowImages];
+      newImages[index] = { ...newImages[index], title };
+      await onUpdateSlideshowImages(newImages);
+    }
+  };
+
+  const handleDeleteSlide = async (index: number) => {
+    if (!confirm('আপনি কি এই ছবিটি মুছতে চান?')) return;
+    if (onUpdateSlideshowImages) {
+      setIsProcessing(true);
+      const newImages = slideshowImages.filter((_, i) => i !== index);
+      await onUpdateSlideshowImages(newImages);
+      setIsProcessing(false);
+    }
   };
 
   const handleSaveSubjects = async () => {
@@ -795,6 +835,57 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {/* View: Settings */}
       {activeSubView === 'SETTINGS' && (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
+          {/* Backup & Export Section */}
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+            <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
+              <i className="fas fa-images text-indigo-500"></i> স্লাইডশো ইমেজ ম্যানেজমেন্ট
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {slideshowImages.map((slide, idx) => (
+                <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-3xl border dark:border-gray-700 space-y-3">
+                  <div className="relative group aspect-video rounded-2xl overflow-hidden border dark:border-gray-700 shadow-md">
+                    <img src={slide.url} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button 
+                        onClick={() => handleDeleteSlide(idx)}
+                        className="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow-lg"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </div>
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 text-white text-[8px] font-black rounded-full">ইমেজ {idx + 1}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-indigo-500 uppercase ml-1">ছবির শিরোনাম (Title)</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        className="flex-grow p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-bold text-xs focus:ring-1 focus:ring-indigo-600 transition-all shadow-sm"
+                        placeholder="এখানে শিরোনাম লিখুন..."
+                        defaultValue={slide.title}
+                        onBlur={(e) => handleUpdateSlideTitle(idx, e.target.value)}
+                      />
+                      <button className="px-3 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-md"><i className="fas fa-save"></i></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {slideshowImages.length < 4 && (
+                <button 
+                  onClick={() => slideshowInputRef.current?.click()}
+                  className="aspect-video rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-2 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <i className="fas fa-plus"></i>
+                  </div>
+                  <span className="text-[10px] font-black text-gray-400 uppercase">নতুন স্লাইড যোগ করুন</span>
+                </button>
+              )}
+            </div>
+            <input type="file" ref={slideshowInputRef} className="hidden" accept="image/*" onChange={handleSlideshowUpload} />
+            <p className="text-[10px] text-gray-400 font-bold italic"><i className="fas fa-info-circle mr-1"></i> সর্বোচ্চ ৪টি ছবি স্লাইডশোতে ব্যবহার করা যাবে।</p>
+          </div>
+
           {/* Backup & Export Section */}
           <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
             <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
