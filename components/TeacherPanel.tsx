@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
-import * as XLSX from 'https://esm.sh/xlsx';
+import * as XLSX from 'xlsx';
 
 interface TeacherPanelProps {
   students: Student[];

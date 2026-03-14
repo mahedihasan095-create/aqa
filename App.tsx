@@ -4,7 +4,8 @@ import TeacherPanel from './components/TeacherPanel';
 import StudentPanel from './components/StudentPanel';
 import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
-import { supabase } from './supabase';
+
+const API_URL = '/api';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewType>('DASHBOARD');
@@ -20,7 +21,7 @@ const App: React.FC = () => {
   const [dailyVisits, setDailyVisits] = useState<number>(0);
   const [totalVisits, setTotalVisits] = useState<number>(0);
   
-  // Supabase Auth State
+  // Auth State (Simplified for local SQL)
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [loginEmail, setLoginEmail] = useState<string>('');
@@ -28,77 +29,59 @@ const App: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
-  const handleSupabaseError = (error: any, action: string) => {
-    console.error(`Supabase Error (${action}):`, error);
-    
-    // Handle stale session/token errors
-    if (error.message?.includes('Refresh Token') || error.status === 400 || error.code === 'PGRST301') {
-      supabase.auth.signOut().then(() => {
-        setUser(null);
-        // Optionally reload or redirect if needed, but clearing state is usually enough
-      });
-      return; // Don't show alert for token errors as we're handling it by logging out
-    }
-
-    if (error.code === '42501') {
-      alert(`Error: পারমিশন ডিনাইড (RLS)! \nসুপাবেস ড্যাশবোর্ডে পলিসি সেট করুন।`);
-    } else {
-      alert(`Error ${action}: ${error.message || 'Unknown error occurred'}`);
-    }
+  const handleApiError = (error: any, action: string) => {
+    console.error(`API Error (${action}):`, error);
+    alert(`Error ${action}: ${error.message || 'Unknown error occurred'}`);
   };
 
   const fetchAllData = async () => {
-    if (!supabase) return;
     try {
-      const [
-        { data: studentsData, error: sErr },
-        { data: resultsData, error: rErr },
-        { data: subjectsData, error: subErr },
-        { data: noticesData, error: nErr },
-        { data: settingsData, error: setErr }
-      ] = await Promise.all([
-        supabase.from('students').select('*'),
-        supabase.from('results').select('*'),
-        supabase.from('subjects').select('*'),
-        supabase.from('notices').select('*').order('id', { ascending: false }),
-        supabase.from('app_settings').select('*')
+      const [sRes, rRes, subRes, nRes, setRes] = await Promise.all([
+        fetch(`${API_URL}/students`),
+        fetch(`${API_URL}/results`),
+        fetch(`${API_URL}/subjects`),
+        fetch(`${API_URL}/notices`),
+        fetch(`${API_URL}/settings`)
       ]);
 
-      if (sErr) handleSupabaseError(sErr, 'Fetching Students');
-      if (rErr) handleSupabaseError(rErr, 'Fetching Results');
+      const studentsData = await sRes.json();
+      const resultsData = await rRes.json();
+      const subjectsData = await subRes.json();
+      const noticesData = await nRes.json();
+      const settingsData = await setRes.json();
+
+      setStudents(studentsData);
+      setResults(resultsData.map((r: any) => ({ ...r, marks: typeof r.marks === 'string' ? JSON.parse(r.marks) : r.marks })));
       
-      if (studentsData) setStudents(studentsData);
-      if (resultsData) setResults(resultsData);
+      const subMap: Record<string, string[]> = {};
+      subjectsData.forEach((row: any) => {
+        subMap[row.class] = typeof row.subjects === 'string' ? JSON.parse(row.subjects) : row.subjects;
+      });
+      setSubjects(subMap);
       
-      if (subjectsData) {
-        const subMap: Record<string, string[]> = {};
-        subjectsData.forEach((row: any) => {
-          subMap[row.class] = row.subjects;
-        });
-        setSubjects(subMap);
-      }
-      
-      if (noticesData) setNotices(noticesData);
+      setNotices(noticesData);
       
       if (settingsData) {
-        const sigSetting = settingsData.find(s => s.key === 'principal_signature');
-        const logoSetting = settingsData.find(s => s.key === 'school_logo');
-        const slideshowSetting = settingsData.find(s => s.key === 'slideshow_images');
+        const sigSetting = settingsData.find((s: any) => s.setting_key === 'principal_signature');
+        const logoSetting = settingsData.find((s: any) => s.setting_key === 'school_logo');
+        const slideshowSetting = settingsData.find((s: any) => s.setting_key === 'slideshow_images');
+        const statsSetting = settingsData.find((s: any) => s.setting_key === 'visitor_stats');
         
-        if (sigSetting) setPrincipalSignature(sigSetting.value);
-        if (logoSetting) setSchoolLogo(logoSetting.value);
-        if (slideshowSetting && slideshowSetting.value) {
+        if (sigSetting) setPrincipalSignature(sigSetting.setting_value);
+        if (logoSetting) setSchoolLogo(logoSetting.setting_value);
+        if (slideshowSetting && slideshowSetting.setting_value) {
           try {
-            const parsed = JSON.parse(slideshowSetting.value);
-            // Migration: if it's an array of strings, convert to objects
-            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
-              setSlideshowImages(parsed.map((url: string) => ({ url, title: '' })));
-            } else {
-              setSlideshowImages(parsed);
-            }
-          } catch (e) {
-            console.error('Error parsing slideshow images:', e);
-          }
+            const parsed = JSON.parse(slideshowSetting.setting_value);
+            setSlideshowImages(parsed);
+          } catch (e) { console.error(e); }
+        }
+        if (statsSetting && statsSetting.setting_value) {
+          try {
+            const stats = JSON.parse(statsSetting.setting_value);
+            const today = new Date().toLocaleDateString('en-CA');
+            setDailyVisits(stats.daily[today] || 0);
+            setTotalVisits(stats.total || 0);
+          } catch (e) { console.error(e); }
         }
       }
     } catch (error) {
@@ -109,41 +92,30 @@ const App: React.FC = () => {
   };
 
   const trackVisit = async () => {
-    if (!supabase) return;
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-    
+    const today = new Date().toLocaleDateString('en-CA');
+    const sessionCounted = sessionStorage.getItem('visit_counted');
+    if (sessionCounted) return;
+
     try {
-      // Fetch current stats from app_settings
-      const { data: settingsData } = await supabase.from('app_settings').select('*');
-      const statsSetting = settingsData?.find(s => s.key === 'visitor_stats');
+      const res = await fetch(`${API_URL}/settings`);
+      const settings = await res.json();
+      const statsSetting = settings.find((s: any) => s.setting_key === 'visitor_stats');
       
       let stats = { total: 0, daily: {} as Record<string, number> };
-      if (statsSetting && statsSetting.value) {
-        try {
-          stats = JSON.parse(statsSetting.value);
-        } catch (e) {
-          console.error('Error parsing visitor stats:', e);
-        }
+      if (statsSetting && statsSetting.setting_value) {
+        stats = JSON.parse(statsSetting.setting_value);
       }
 
-      // Check if we already counted this session
-      const sessionCounted = sessionStorage.getItem('visit_counted');
+      stats.total = (stats.total || 0) + 1;
+      stats.daily[today] = (stats.daily[today] || 0) + 1;
+
+      await fetch(`${API_URL}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'visitor_stats', value: JSON.stringify(stats) })
+      });
       
-      if (!sessionCounted) {
-        stats.total = (stats.total || 0) + 1;
-        stats.daily[today] = (stats.daily[today] || 0) + 1;
-        
-        // Keep only last 30 days of daily stats to keep the JSON small
-        const dates = Object.keys(stats.daily).sort();
-        if (dates.length > 30) {
-          const toDelete = dates.slice(0, dates.length - 30);
-          toDelete.forEach(d => delete stats.daily[d]);
-        }
-
-        await supabase.from('app_settings').upsert({ key: 'visitor_stats', value: JSON.stringify(stats) });
-        sessionStorage.setItem('visit_counted', 'true');
-      }
-
+      sessionStorage.setItem('visit_counted', 'true');
       setDailyVisits(stats.daily[today] || 0);
       setTotalVisits(stats.total || 0);
     } catch (err) {
@@ -152,40 +124,13 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Auth session error:', error);
-          // If session is invalid, clear it
-          if (error.message.includes('Refresh Token') || error.status === 400) {
-            await supabase.auth.signOut();
-            setUser(null);
-          }
-        } else {
-          setUser(session?.user ?? null);
-        }
-      } catch (err) {
-        console.error('Unexpected auth error:', err);
-      }
-    };
-
-    initAuth();
-
-    // Listen for Auth Changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-    });
+    const savedUser = localStorage.getItem('school_user');
+    if (savedUser) setUser(JSON.parse(savedUser));
 
     fetchAllData();
     trackVisit();
     const savedDarkMode = localStorage.getItem('school_dark_mode');
     if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode) === true);
-
-    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -198,25 +143,25 @@ const App: React.FC = () => {
     e.preventDefault();
     setIsLoggingIn(true);
     setLoginError(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-    if (error) {
-      setLoginError('ইমেইল বা পাসওয়ার্ড ভুল!');
-      setIsLoggingIn(false);
-    } else {
+    
+    // Simple mock login for local SQL setup (In real app, use a proper /api/login endpoint)
+    if (loginEmail === 'admin@school.com' && loginPassword === 'admin123') {
+      const mockUser = { email: loginEmail, id: 'admin' };
+      setUser(mockUser);
+      localStorage.setItem('school_user', JSON.stringify(mockUser));
       setShowLoginModal(false);
       setLoginEmail('');
       setLoginPassword('');
       setView('TEACHER_DASHBOARD');
-      setIsLoggingIn(false);
+    } else {
+      setLoginError('ইমেইল বা পাসওয়ার্ড ভুল!');
     }
+    setIsLoggingIn(false);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
     setUser(null);
+    localStorage.removeItem('school_user');
     setView('DASHBOARD');
   };
 
@@ -303,82 +248,110 @@ const App: React.FC = () => {
             schoolLogo={schoolLogo}
             slideshowImages={slideshowImages}
             onUpdateSlideshowImages={async (images: {url: string, title: string}[]) => {
-              const { error } = await supabase!.from('app_settings').upsert({ key: 'slideshow_images', value: JSON.stringify(images) });
-              if (!error) { setSlideshowImages(images); return true; }
-              handleSupabaseError(error, 'Slideshow Update');
+              const res = await fetch(`${API_URL}/settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'slideshow_images', value: JSON.stringify(images) })
+              });
+              if (res.ok) { setSlideshowImages(images); return true; }
               return false;
             }}
             onSetSubjectsForClass={async (className, classSubjects) => {
-              const { error } = await supabase!.from('subjects').upsert({ class: className, subjects: classSubjects }, { onConflict: 'class' });
-              if (!error) { setSubjects(prev => ({ ...prev, [className]: classSubjects })); return true; }
-              handleSupabaseError(error, 'Updating Subjects');
+              const res = await fetch(`${API_URL}/subjects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ className, classSubjects })
+              });
+              if (res.ok) { setSubjects(prev => ({ ...prev, [className]: classSubjects })); return true; }
               return false;
             }}
             onAddStudent={async (s) => {
-              const { error } = await supabase!.from('students').insert(s);
-              if (!error) { setStudents(prev => [...prev, s]); return true; }
-              handleSupabaseError(error, 'Adding Student');
+              const res = await fetch(`${API_URL}/students`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(s)
+              });
+              if (res.ok) { setStudents(prev => [...prev, s]); return true; }
               return false;
             }}
             onAddStudents={async (list) => {
-              const { error } = await supabase!.from('students').insert(list);
-              if (!error) { setStudents(prev => [...prev, ...list]); return true; }
-              handleSupabaseError(error, 'Importing Students');
-              return false;
+              for (const s of list) {
+                await fetch(`${API_URL}/students`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(s)
+                });
+              }
+              setStudents(prev => [...prev, ...list]);
+              return true;
             }}
             onUpdateStudent={async (s) => {
-              const { error } = await supabase!.from('students').update(s).eq('id', s.id);
-              if (!error) { setStudents(prev => prev.map(item => item.id === s.id ? s : item)); return true; }
-              handleSupabaseError(error, 'Updating Student');
+              const res = await fetch(`${API_URL}/students`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(s)
+              });
+              if (res.ok) { setStudents(prev => prev.map(item => item.id === s.id ? s : item)); return true; }
               return false;
             }}
             onDeleteStudent={async (id) => {
-              const { error } = await supabase!.from('students').delete().eq('id', id);
-              if (!error) { setStudents(prev => prev.filter(s => s.id !== id)); return true; }
-              handleSupabaseError(error, 'Deleting Student');
+              const res = await fetch(`${API_URL}/students/${id}`, { method: 'DELETE' });
+              if (res.ok) { setStudents(prev => prev.filter(s => s.id !== id)); return true; }
               return false;
             }}
-            onSaveResult={async (res) => {
-              const { error } = await supabase!.from('results').upsert(res);
-              if (!error) { setResults(prev => [...prev.filter(r => r.id !== res.id), res]); return true; }
-              handleSupabaseError(error, 'Saving Result');
+            onSaveResult={async (resObj) => {
+              const res = await fetch(`${API_URL}/results`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(resObj)
+              });
+              if (res.ok) { setResults(prev => [...prev.filter(r => r.id !== resObj.id), resObj]); return true; }
               return false;
             }}
             onSaveResults={async (list) => {
-              const { error } = await supabase!.from('results').upsert(list);
-              if (!error) { fetchAllData(); return true; }
-              handleSupabaseError(error, 'Saving Results Bulk');
-              return false;
+              for (const r of list) {
+                await fetch(`${API_URL}/results`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(r)
+                });
+              }
+              fetchAllData();
+              return true;
             }}
             onDeleteResult={async (id) => {
-              const { error } = await supabase!.from('results').delete().eq('id', id);
-              if (!error) { setResults(prev => prev.filter(r => r.id !== id)); return true; }
-              handleSupabaseError(error, 'Deleting Result');
+              const res = await fetch(`${API_URL}/results/${id}`, { method: 'DELETE' });
+              if (res.ok) { setResults(prev => prev.filter(r => r.id !== id)); return true; }
               return false;
             }}
             onUpdateNotices={async (n) => {
-              const { error: delError } = await supabase!.from('notices').delete().neq('id', '000');
-              if (delError) { handleSupabaseError(delError, 'Notice Sync'); return false; }
-              const { error } = await supabase!.from('notices').insert(n);
-              if (!error) { setNotices(n); return true; }
-              handleSupabaseError(error, 'Updating Notices');
+              const res = await fetch(`${API_URL}/notices`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(n)
+              });
+              if (res.ok) { setNotices(n); return true; }
               return false;
             }}
             onUpdatePassword={async (p) => {
-              const { error } = await supabase.auth.updateUser({ password: p });
-              if (!error) alert('পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে।');
-              else handleSupabaseError(error, 'Password Update');
+              alert('পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে। (Mock)');
             }}
             onUpdatePrincipalSignature={async (sig) => {
-              const { error } = await supabase!.from('app_settings').upsert({ key: 'principal_signature', value: sig });
-              if (!error) { setPrincipalSignature(sig); return true; }
-              handleSupabaseError(error, 'Signature Upload');
+              const res = await fetch(`${API_URL}/settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'principal_signature', value: sig })
+              });
+              if (res.ok) { setPrincipalSignature(sig); return true; }
               return false;
             }}
             onUpdateSchoolLogo={async (logoBase64) => {
-              const { error } = await supabase!.from('app_settings').upsert({ key: 'school_logo', value: logoBase64 });
-              if (!error) { setSchoolLogo(logoBase64); return true; }
-              handleSupabaseError(error, 'Logo Update');
+              const res = await fetch(`${API_URL}/settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'school_logo', value: logoBase64 })
+              });
+              if (res.ok) { setSchoolLogo(logoBase64); return true; }
               return false;
             }}
             currentPassword=""
