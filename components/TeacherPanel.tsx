@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Student, Result, TeacherSubView, SubjectMarks, Notice, WelcomeConfig } from '../types';
-import * as XLSX from 'xlsx';
+import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
+import * as XLSX from 'https://esm.sh/xlsx';
 
 interface TeacherPanelProps {
   students: Student[];
@@ -11,7 +11,6 @@ interface TeacherPanelProps {
   principalSignature?: string;
   schoolLogo?: string;
   slideshowImages?: {url: string, title: string}[];
-  welcomeConfig?: WelcomeConfig;
   onSetSubjectsForClass: (className: string, classSubjects: string[]) => Promise<boolean>;
   onAddStudent: (s: Student) => Promise<boolean>;
   onAddStudents?: (list: Student[]) => Promise<boolean>;
@@ -25,7 +24,6 @@ interface TeacherPanelProps {
   onUpdatePrincipalSignature: (signatureBase64: string) => Promise<boolean>;
   onUpdateSchoolLogo: (logoBase64: string) => Promise<boolean>;
   onUpdateSlideshowImages?: (images: {url: string, title: string}[]) => Promise<boolean>;
-  onUpdateWelcomeConfig?: (config: WelcomeConfig) => Promise<boolean>;
   currentPassword: string;
 }
 
@@ -34,9 +32,9 @@ const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
-  students, results, subjects, notices, principalSignature, schoolLogo, slideshowImages = [], welcomeConfig, onSetSubjectsForClass, onAddStudent, onAddStudents,
+  students, results, subjects, notices, principalSignature, schoolLogo, slideshowImages = [], onSetSubjectsForClass, onAddStudent, onAddStudents,
   onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
-  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, onUpdateSlideshowImages, onUpdateWelcomeConfig, currentPassword 
+  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, onUpdateSlideshowImages, currentPassword 
 }) => {
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('STUDENT_LIST');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,29 +48,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [subjectClass, setSubjectClass] = useState('প্রথম');
   const [subjectInput, setSubjectInput] = useState('');
   const [noticeInput, setNoticeInput] = useState('');
-  const [welcomeMsg, setWelcomeMsg] = useState(welcomeConfig?.message || '');
-  const [welcomeDuration, setWelcomeDuration] = useState(welcomeConfig?.duration || 5);
-  const [welcomeEnabled, setWelcomeEnabled] = useState(welcomeConfig?.isEnabled || false);
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
-
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-    type: 'danger' | 'warning' | 'info';
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-    type: 'danger'
-  });
-
-  const showConfirm = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
-    setConfirmModal({ isOpen: true, title, message, onConfirm, type });
-  };
 
   const groupedResults = useMemo(() => {
     const groups: Record<string, { class: string, year: string, examName: string, results: Result[], isPublished: boolean, totalStudents: number }> = {};
@@ -111,16 +88,19 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
-  const handleDeleteGroup = (key: string) => {
-    showConfirm('গ্রুপ মুছুন', 'আপনি কি নিশ্চিত যে আপনি এই গ্রুপের সকল রেজাল্ট মুছতে চান?', async () => {
-      const group = groupedResults.find(g => g.key === key);
-      if (!group) return;
-      setIsProcessing(true);
-      for (const res of group.results) {
-        await onDeleteResult(res.id);
-      }
-      setIsProcessing(false);
-    });
+  const handleDeleteGroup = async (key: string) => {
+    if (!confirm('আপনি কি এই গ্রুপের সকল রেজাল্ট মুছতে চান?')) return;
+    const group = groupedResults.find(g => g.key === key);
+    if (!group) return;
+    setIsProcessing(true);
+    // We need to delete one by one or have a bulk delete. 
+    // Since onSaveResults is bulk, maybe we can use it if the backend supports it, 
+    // but onDeleteResult is single. Let's use single for now or check if we can add bulk delete.
+    // For now, let's just do single deletes in a loop.
+    for (const res of group.results) {
+      await onDeleteResult(res.id);
+    }
+    setIsProcessing(false);
   };
 
   const [studentFilterClass, setStudentFilterClass] = useState('সব');
@@ -369,12 +349,11 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setEditingNoticeId(notice.id);
   };
 
-  const handleDeleteNotice = (id: string) => {
-    showConfirm('নোটিশ মুছুন', 'আপনি কি নিশ্চিত যে আপনি এই নোটিশটি মুছতে চান?', async () => {
-      setIsProcessing(true);
-      const success = await onUpdateNotices(notices.filter(n => n.id !== id));
-      setIsProcessing(false);
-    });
+  const handleDeleteNotice = async (id: string) => {
+    if (!confirm('আপনি কি এই নোটিশটি মুছতে চান?')) return;
+    setIsProcessing(true);
+    const success = await onUpdateNotices(notices.filter(n => n.id !== id));
+    setIsProcessing(false);
   };
 
   const handleTogglePublish = async (resultId: string) => {
@@ -458,15 +437,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     }
   };
 
-  const handleDeleteSlide = (index: number) => {
-    showConfirm('ছবি মুছুন', 'আপনি কি নিশ্চিত যে আপনি এই ছবিটি মুছতে চান?', async () => {
-      if (onUpdateSlideshowImages) {
-        setIsProcessing(true);
-        const newImages = slideshowImages.filter((_, i) => i !== index);
-        await onUpdateSlideshowImages(newImages);
-        setIsProcessing(false);
-      }
-    });
+  const handleDeleteSlide = async (index: number) => {
+    if (!confirm('আপনি কি এই ছবিটি মুছতে চান?')) return;
+    if (onUpdateSlideshowImages) {
+      setIsProcessing(true);
+      const newImages = slideshowImages.filter((_, i) => i !== index);
+      await onUpdateSlideshowImages(newImages);
+      setIsProcessing(false);
+    }
   };
 
   const handleSaveSubjects = async () => {
@@ -482,27 +460,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       setSubjectInput(''); // Clear input after success
     }
     setIsProcessing(false);
-  };
-
-  const handleSaveWelcomeConfig = async () => {
-    if (onUpdateWelcomeConfig) {
-      setIsProcessing(true);
-      const success = await onUpdateWelcomeConfig({
-        message: welcomeMsg,
-        duration: welcomeDuration,
-        isEnabled: welcomeEnabled
-      });
-      if (success) alert('শুভেচ্ছা বার্তা সেটিংস সফলভাবে আপডেট করা হয়েছে!');
-      setIsProcessing(false);
-    }
-  };
-
-  const handleDeleteStudent = (id: string, name: string) => {
-    showConfirm('শিক্ষার্থী মুছুন', `আপনি কি নিশ্চিত যে আপনি "${name}"-কে তালিকা থেকে মুছে ফেলতে চান?`, async () => {
-      setIsProcessing(true);
-      await onDeleteStudent(id);
-      setIsProcessing(false);
-    });
   };
 
   return (
@@ -586,7 +543,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                            <td className="p-4 text-center">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
-                                 <button onClick={() => handleDeleteStudent(student.id, student.name)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
+                                 <button onClick={() => onDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
                               </div>
                            </td>
                         </tr>
@@ -929,56 +886,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             <p className="text-[10px] text-gray-400 font-bold italic"><i className="fas fa-info-circle mr-1"></i> সর্বোচ্চ ৪টি ছবি স্লাইডশোতে ব্যবহার করা যাবে।</p>
           </div>
 
-          {/* Welcome Message Section */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
-            <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
-               <i className="fas fa-gift text-indigo-500"></i> শুভেচ্ছা বার্তা (Welcome Message)
-            </h2>
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-grow space-y-2">
-                  <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শুভেচ্ছা বার্তা</label>
-                  <textarea 
-                    className="w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner h-24 resize-none"
-                    placeholder="উদা: আনওয়ারুল কুরআন একাডেমীতে আপনাকে স্বাগতম!"
-                    value={welcomeMsg}
-                    onChange={e => setWelcomeMsg(e.target.value)}
-                  />
-                </div>
-                <div className="w-full md:w-48 space-y-2">
-                  <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">সময় (সেকেন্ড)</label>
-                  <input 
-                    type="number" 
-                    className="w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
-                    value={welcomeDuration}
-                    onChange={e => setWelcomeDuration(parseInt(e.target.value))}
-                    min="1"
-                    max="30"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${welcomeEnabled ? 'bg-green-500' : 'bg-gray-300'}`} onClick={() => setWelcomeEnabled(!welcomeEnabled)}>
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${welcomeEnabled ? 'left-7' : 'left-1'}`}></div>
-                  </div>
-                  <span className="text-sm font-black text-gray-700 dark:text-gray-200">সিস্টেমটি {welcomeEnabled ? 'চালু' : 'বন্ধ'} আছে</span>
-                </div>
-                <button 
-                  onClick={handleSaveWelcomeConfig}
-                  disabled={isProcessing}
-                  className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
-                >
-                  {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-save"></i>} সংরক্ষণ করুন
-                </button>
-              </div>
-              <p className="text-[10px] text-gray-400 font-bold italic">
-                * এটি চালু থাকলে এপে প্রবেশের সময় আতশবাজি ও বেলুনের ইফেক্ট সহ এই বার্তাটি দেখাবে।
-              </p>
-            </div>
-          </div>
-
           {/* Backup & Export Section */}
           <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
             <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
@@ -1170,50 +1077,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <button type="submit" disabled={isProcessing} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">আপডেট করুন</button>
                  </div>
               </form>
-           </div>
-        </div>
-      )}
-
-      {/* Global Confirmation Modal */}
-      {confirmModal.isOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-           <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-[40px] p-8 shadow-2xl animate-scale-in text-center">
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
-                confirmModal.type === 'danger' ? 'bg-red-50 dark:bg-red-900/30' : 
-                confirmModal.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/30' : 
-                'bg-blue-50 dark:bg-blue-900/30'
-              }`}>
-                <i className={`fas ${
-                  confirmModal.type === 'danger' ? 'fa-exclamation-triangle text-red-500' : 
-                  confirmModal.type === 'warning' ? 'fa-exclamation-circle text-amber-500' : 
-                  'fa-info-circle text-blue-500'
-                } text-3xl`}></i>
-              </div>
-              <h2 className="text-2xl font-black mb-2 text-gray-900 dark:text-gray-100">{confirmModal.title}</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-8 font-bold">
-                {confirmModal.message}
-              </p>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} 
-                  className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-2xl font-black hover:bg-gray-200 transition-colors"
-                >
-                  না, ফিরে যান
-                </button>
-                <button 
-                  onClick={async () => {
-                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                    await confirmModal.onConfirm();
-                  }} 
-                  className={`flex-1 py-4 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 ${
-                    confirmModal.type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 
-                    confirmModal.type === 'warning' ? 'bg-amber-600 hover:bg-amber-700' : 
-                    'bg-indigo-600 hover:bg-indigo-700'
-                  }`}
-                >
-                  হ্যাঁ, নিশ্চিত করুন
-                </button>
-              </div>
            </div>
         </div>
       )}
