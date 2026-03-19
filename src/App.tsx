@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Student, Result, ViewType, Notice } from './types';
+import { Student, Result, ViewType, Notice, WelcomeConfig } from './types';
 import TeacherPanel from './components/TeacherPanel';
 import StudentPanel from './components/StudentPanel';
 import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
+import WelcomeOverlay from './components/WelcomeOverlay';
 import { supabase } from './supabase';
 
 const App: React.FC = () => {
@@ -17,6 +18,7 @@ const App: React.FC = () => {
   const [principalSignature, setPrincipalSignature] = useState<string>('');
   const [schoolLogo, setSchoolLogo] = useState<string>('');
   const [slideshowImages, setSlideshowImages] = useState<{url: string, title: string}[]>([]);
+  const [welcomeConfig, setWelcomeConfig] = useState<WelcomeConfig>({ message: '', duration: 5, isEnabled: false });
   const [dailyVisits, setDailyVisits] = useState<number>(0);
   const [totalVisits, setTotalVisits] = useState<number>(0);
   
@@ -84,9 +86,17 @@ const App: React.FC = () => {
         const sigSetting = settingsData.find(s => s.key === 'principal_signature');
         const logoSetting = settingsData.find(s => s.key === 'school_logo');
         const slideshowSetting = settingsData.find(s => s.key === 'slideshow_images');
+        const welcomeSetting = settingsData.find(s => s.key === 'welcome_config');
         
         if (sigSetting) setPrincipalSignature(sigSetting.value);
         if (logoSetting) setSchoolLogo(logoSetting.value);
+        if (welcomeSetting && welcomeSetting.value) {
+          try {
+            setWelcomeConfig(JSON.parse(welcomeSetting.value));
+          } catch (e) {
+            console.error('Error parsing welcome config:', e);
+          }
+        }
         if (slideshowSetting && slideshowSetting.value) {
           try {
             const parsed = JSON.parse(slideshowSetting.value);
@@ -381,12 +391,21 @@ const App: React.FC = () => {
               handleSupabaseError(error, 'Logo Update');
               return false;
             }}
+            welcomeConfig={welcomeConfig}
+            onUpdateWelcomeConfig={async (config) => {
+              const { error } = await supabase!.from('app_settings').upsert({ key: 'welcome_config', value: JSON.stringify(config) });
+              if (!error) { setWelcomeConfig(config); return true; }
+              handleSupabaseError(error, 'Welcome Config Update');
+              return false;
+            }}
             currentPassword=""
           />
         ) : (
           <StudentPanel students={students} results={results} subjects={subjects} principalSignature={principalSignature} logo={schoolLogo} />
         )}
       </main>
+
+      {welcomeConfig.isEnabled && <WelcomeOverlay config={welcomeConfig} />}
 
       {showLoginModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-indigo-950/80 backdrop-blur-md p-4 animate-fade-in">
