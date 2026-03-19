@@ -105,7 +105,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     const targetYear = searchType === 'BATCH' ? batchFilter.year : indivSearch.year;
     const targetExam = searchType === 'BATCH' ? batchFilter.exam : indivSearch.exam;
     
-    const classStudents = students.filter(s => s.studentClass === targetClass && s.year === targetYear && s.status !== 'inactive');
+    const classStudents = students.filter(s => s.studentClass === targetClass && s.year === targetYear);
     const scores = classStudents.map(student => {
       if (targetExam === 'বার্ষিক পরীক্ষা') {
         const stats = calculateGrandAverage(student.id, targetClass, targetYear);
@@ -127,8 +127,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     const student = students.find(s => 
       s.roll.toString() === indivSearch.roll.toString() && 
       s.studentClass === indivSearch.class && 
-      s.year === indivSearch.year &&
-      s.status !== 'inactive'
+      s.year === indivSearch.year
     );
     if (!student) { alert('শিক্ষার্থী পাওয়া যায়নি।'); return; }
     setFoundStudent(student);
