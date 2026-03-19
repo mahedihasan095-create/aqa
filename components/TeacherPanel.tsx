@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
-import * as XLSX from 'https://esm.sh/xlsx';
+import { Student, Result, TeacherSubView, SubjectMarks, Notice, WelcomeConfig } from '../types';
+import * as XLSX from 'xlsx';
 
 interface TeacherPanelProps {
   students: Student[];
@@ -11,6 +11,7 @@ interface TeacherPanelProps {
   principalSignature?: string;
   schoolLogo?: string;
   slideshowImages?: {url: string, title: string}[];
+  welcomeConfig?: WelcomeConfig;
   onSetSubjectsForClass: (className: string, classSubjects: string[]) => Promise<boolean>;
   onAddStudent: (s: Student) => Promise<boolean>;
   onAddStudents?: (list: Student[]) => Promise<boolean>;
@@ -24,6 +25,7 @@ interface TeacherPanelProps {
   onUpdatePrincipalSignature: (signatureBase64: string) => Promise<boolean>;
   onUpdateSchoolLogo: (logoBase64: string) => Promise<boolean>;
   onUpdateSlideshowImages?: (images: {url: string, title: string}[]) => Promise<boolean>;
+  onUpdateWelcomeConfig?: (config: WelcomeConfig) => Promise<boolean>;
   currentPassword: string;
 }
 
@@ -32,9 +34,9 @@ const YEARS = ['২০২৬', '২০২৭', '২০২৮', '২০২৯', '
 const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয় সাময়িক', 'বার্ষিক পরীক্ষা'];
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
-  students, results, subjects, notices, principalSignature, schoolLogo, slideshowImages = [], onSetSubjectsForClass, onAddStudent, onAddStudents,
+  students, results, subjects, notices, principalSignature, schoolLogo, slideshowImages = [], welcomeConfig, onSetSubjectsForClass, onAddStudent, onAddStudents,
   onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
-  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, onUpdateSlideshowImages, currentPassword 
+  onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, onUpdateSlideshowImages, onUpdateWelcomeConfig, currentPassword 
 }) => {
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('STUDENT_LIST');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -48,6 +50,9 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [subjectClass, setSubjectClass] = useState('প্রথম');
   const [subjectInput, setSubjectInput] = useState('');
   const [noticeInput, setNoticeInput] = useState('');
+  const [welcomeMsg, setWelcomeMsg] = useState(welcomeConfig?.message || '');
+  const [welcomeDuration, setWelcomeDuration] = useState(welcomeConfig?.duration || 5);
+  const [welcomeEnabled, setWelcomeEnabled] = useState(welcomeConfig?.isEnabled || false);
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
 
@@ -460,6 +465,19 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       setSubjectInput(''); // Clear input after success
     }
     setIsProcessing(false);
+  };
+
+  const handleSaveWelcomeConfig = async () => {
+    if (onUpdateWelcomeConfig) {
+      setIsProcessing(true);
+      const success = await onUpdateWelcomeConfig({
+        message: welcomeMsg,
+        duration: welcomeDuration,
+        isEnabled: welcomeEnabled
+      });
+      if (success) alert('শুভেচ্ছা বার্তা সেটিংস সফলভাবে আপডেট করা হয়েছে!');
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -884,6 +902,56 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             </div>
             <input type="file" ref={slideshowInputRef} className="hidden" accept="image/*" onChange={handleSlideshowUpload} />
             <p className="text-[10px] text-gray-400 font-bold italic"><i className="fas fa-info-circle mr-1"></i> সর্বোচ্চ ৪টি ছবি স্লাইডশোতে ব্যবহার করা যাবে।</p>
+          </div>
+
+          {/* Welcome Message Section */}
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+            <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
+               <i className="fas fa-gift text-indigo-500"></i> শুভেচ্ছা বার্তা (Welcome Message)
+            </h2>
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-grow space-y-2">
+                  <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শুভেচ্ছা বার্তা</label>
+                  <textarea 
+                    className="w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner h-24 resize-none"
+                    placeholder="উদা: আনওয়ারুল কুরআন একাডেমীতে আপনাকে স্বাগতম!"
+                    value={welcomeMsg}
+                    onChange={e => setWelcomeMsg(e.target.value)}
+                  />
+                </div>
+                <div className="w-full md:w-48 space-y-2">
+                  <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">সময় (সেকেন্ড)</label>
+                  <input 
+                    type="number" 
+                    className="w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
+                    value={welcomeDuration}
+                    onChange={e => setWelcomeDuration(parseInt(e.target.value))}
+                    min="1"
+                    max="30"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${welcomeEnabled ? 'bg-green-500' : 'bg-gray-300'}`} onClick={() => setWelcomeEnabled(!welcomeEnabled)}>
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${welcomeEnabled ? 'left-7' : 'left-1'}`}></div>
+                  </div>
+                  <span className="text-sm font-black text-gray-700 dark:text-gray-200">সিস্টেমটি {welcomeEnabled ? 'চালু' : 'বন্ধ'} আছে</span>
+                </div>
+                <button 
+                  onClick={handleSaveWelcomeConfig}
+                  disabled={isProcessing}
+                  className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
+                >
+                  {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-save"></i>} সংরক্ষণ করুন
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400 font-bold italic">
+                * এটি চালু থাকলে এপে প্রবেশের সময় আতশবাজি ও বেলুনের ইফেক্ট সহ এই বার্তাটি দেখাবে।
+              </p>
+            </div>
           </div>
 
           {/* Backup & Export Section */}
