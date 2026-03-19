@@ -110,7 +110,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   // Edit Student State
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
   const [formData, setFormData] = useState({ 
     name: '', fatherName: '', motherName: '', village: '', mobile: '', studentClass: 'প্রথম', year: '২০২৬', roll: '' 
@@ -544,7 +543,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                            <td className="p-4 text-center">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
-                                 <button onClick={() => setStudentToDelete(student)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
+                                 <button onClick={() => onDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
                               </div>
                            </td>
                         </tr>
@@ -1079,46 +1078,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  </div>
               </form>
            </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {studentToDelete && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-[40px] p-10 shadow-2xl animate-scale-in border dark:border-gray-700">
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-[24px] flex items-center justify-center mx-auto mb-4 shadow-xl shadow-red-500/10">
-                <i className="fas fa-exclamation-triangle text-3xl text-red-500"></i>
-              </div>
-              <h2 className="text-3xl font-black text-gray-900 dark:text-gray-100">আপনি কি নিশ্চিত?</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-4 font-bold leading-relaxed">
-                আপনি কি <span className="text-red-500 font-black">"{studentToDelete.name}"</span> এর সকল তথ্য স্থায়ীভাবে মুছে ফেলতে চান? এটি আর ফিরিয়ে আনা সম্ভব হবে না।
-              </p>
-            </div>
-            
-            <div className="flex gap-4 pt-4">
-              <button 
-                onClick={() => setStudentToDelete(null)} 
-                className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black hover:bg-gray-200 transition-colors"
-              >
-                বাতিল
-              </button>
-              <button 
-                onClick={async () => {
-                  setIsProcessing(true);
-                  const success = await onDeleteStudent(studentToDelete.id);
-                  if (success) {
-                    setStudentToDelete(null);
-                  }
-                  setIsProcessing(false);
-                }} 
-                disabled={isProcessing}
-                className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-black shadow-xl shadow-red-600/30 hover:bg-red-700 transition-all flex items-center justify-center gap-2 active:scale-95"
-              >
-                {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-trash"></i>} মুছে ফেলুন
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

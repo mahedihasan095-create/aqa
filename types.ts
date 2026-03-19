@@ -33,11 +33,5 @@ export interface Notice {
   date: string;
 }
 
-export interface WelcomeConfig {
-  message: string;
-  duration: number;
-  isEnabled: boolean;
-}
-
 export type ViewType = 'DASHBOARD' | 'TEACHER_DASHBOARD' | 'STUDENT_PORTAL';
 export type TeacherSubView = 'ENROLL' | 'RESULT_ENTRY' | 'STUDENT_LIST' | 'MANAGE_RESULTS' | 'SETTINGS' | 'NOTICES';
