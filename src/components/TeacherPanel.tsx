@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
-import * as XLSX from 'https://esm.sh/xlsx';
+import * as XLSX from 'xlsx';
 
 interface TeacherPanelProps {
   students: Student[];
@@ -83,7 +83,26 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const group = groupedResults.find(g => g.key === key);
     if (!group) return;
     setIsProcessing(true);
-    const updatedResults = group.results.map(r => ({ ...r, isPublished: !currentStatus }));
+    const updatedResults = group.results.map(r => {
+      let updatedRes = { ...r, isPublished: !currentStatus };
+      if (!r.studentName) {
+        const student = students.find(s => s.id === r.studentId);
+        if (student) {
+          updatedRes = {
+            ...updatedRes,
+            studentName: student.name,
+            studentRoll: student.roll,
+            studentClass: student.studentClass,
+            studentYear: student.year,
+            studentFatherName: student.fatherName,
+            studentMotherName: student.motherName,
+            studentVillage: student.village,
+            studentMobile: student.mobile
+          };
+        }
+      }
+      return updatedRes;
+    });
     await onSaveResults(updatedResults);
     setIsProcessing(false);
   };
@@ -110,6 +129,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   // Edit Student State
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({ 
     name: '', fatherName: '', motherName: '', village: '', mobile: '', studentClass: 'প্রথম', year: '২০২৬', roll: '' 
@@ -206,13 +226,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   const downloadResultsExcel = () => {
     const data = results.map(r => {
+      const student = students.find(s => s.id === r.studentId);
       const marksObj: Record<string, number> = {};
       r.marks.forEach(m => {
         marksObj[m.subjectName] = m.marks;
       });
       return {
-        'রোল': r.studentRoll,
-        'নাম': r.studentName,
+        'রোল': student?.roll || '',
+        'নাম': student?.name || '',
         'শ্রেণী': r.class,
         'পরীক্ষা': r.examName,
         'সাল': r.year,
@@ -278,6 +299,43 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       alert('আপডেট করতে সমস্যা হয়েছে।');
     }
     setIsProcessing(false);
+  };
+
+  const handleResultExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data: any[] = XLSX.utils.sheet_to_json(ws);
+        
+        const classSubjects = subjects[entryConfig.class] || [];
+        const newBulkMarks = { ...bulkMarks };
+
+        data.forEach(row => {
+          const roll = (row['রোল'] || row['Roll'] || '').toString();
+          const student = students.find(s => s.roll.toString() === roll && s.studentClass === entryConfig.class && s.year === entryConfig.year);
+          if (student) {
+            const marks: Record<string, string> = {};
+            classSubjects.forEach(sub => {
+              if (row[sub] !== undefined) {
+                marks[sub] = row[sub].toString();
+              }
+            });
+            newBulkMarks[student.id] = { ...(newBulkMarks[student.id] || {}), ...marks };
+          }
+        });
+
+        setBulkMarks(newBulkMarks);
+        alert('রেজাল্ট ইমপোর্ট করা হয়েছে। দয়া করে চেক করে সেভ করুন।');
+      } catch (err) {
+        alert('ফাইলটি প্রসেস করতে সমস্যা হয়েছে।');
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,8 +416,29 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const handleTogglePublish = async (resultId: string) => {
     const res = results.find(r => r.id === resultId);
     if (!res) return;
+    
+    let updatedRes = { ...res, isPublished: !res.isPublished };
+    
+    // If snapshot is missing (for old results), try to add it
+    if (!res.studentName) {
+      const student = students.find(s => s.id === res.studentId);
+      if (student) {
+        updatedRes = {
+          ...updatedRes,
+          studentName: student.name,
+          studentRoll: student.roll,
+          studentClass: student.studentClass,
+          studentYear: student.year,
+          studentFatherName: student.fatherName,
+          studentMotherName: student.motherName,
+          studentVillage: student.village,
+          studentMobile: student.mobile
+        };
+      }
+    }
+    
     setIsProcessing(true);
-    await onSaveResult({ ...res, isPublished: !res.isPublished });
+    await onSaveResult(updatedRes);
     setIsProcessing(false);
   };
 
@@ -376,11 +455,21 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       
       return {
         id: `${studentId}-${entryConfig.exam}-${entryConfig.year}`,
-        studentId,
-        studentName: student?.name || '',
-        studentRoll: student?.roll || '',
-        examName: entryConfig.exam, class: entryConfig.class, year: entryConfig.year,
-        marks: marksList, totalMarks: total, grade: calculateGrade(total, classSubjects.length), 
+        studentId, 
+        studentName: student?.name || existingRes?.studentName || '',
+        studentRoll: student?.roll || existingRes?.studentRoll || '',
+        studentClass: student?.studentClass || existingRes?.studentClass || '',
+        studentYear: student?.year || existingRes?.studentYear || '',
+        studentFatherName: student?.fatherName || existingRes?.studentFatherName || '',
+        studentMotherName: student?.motherName || existingRes?.studentMotherName || '',
+        studentVillage: student?.village || existingRes?.studentVillage || '',
+        studentMobile: student?.mobile || existingRes?.studentMobile || '',
+        examName: entryConfig.exam, 
+        class: entryConfig.class, 
+        year: entryConfig.year,
+        marks: marksList, 
+        totalMarks: total, 
+        grade: calculateGrade(total, classSubjects.length), 
         isPublished: existingRes ? existingRes.isPublished : false
       };
     });
@@ -393,8 +482,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     return students.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.roll.includes(studentSearch);
       const matchesClass = studentFilterClass === 'সব' || s.studentClass === studentFilterClass;
-      const isNotInactive = s.status !== 'inactive';
-      return matchesSearch && matchesClass && isNotInactive;
+      return matchesSearch && matchesClass;
     }).sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
   }, [students, studentSearch, studentFilterClass]);
 
@@ -547,7 +635,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                            <td className="p-4 text-center">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
-                                 <button onClick={() => { if (confirm('আপনি কি এই শিক্ষার্থীকে ডিলিট করতে চান?')) onDeleteStudent(student.id); }} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
+                                 <button onClick={() => setDeletingStudentId(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
                               </div>
                            </td>
                         </tr>
@@ -663,7 +751,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <button onClick={() => resultExcelRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2.5 rounded-xl text-xs font-black border border-green-200 dark:border-green-800 flex items-center gap-2 hover:bg-green-100 transition-colors">
                   <i className="fas fa-file-excel"></i> ইমপোর্ট
                 </button>
-                <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" />
+                <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" onChange={handleResultExcelImport} />
               </div>
             </div>
             
@@ -1082,6 +1170,45 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  </div>
               </form>
            </div>
+        </div>
+      )}
+
+      {/* Delete Student Confirmation Modal */}
+      {deletingStudentId && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-scale-in text-center">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-exclamation-triangle text-2xl"></i>
+            </div>
+            <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-2">আপনি কি নিশ্চিত?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 font-bold">
+              আপনি কি <span className="text-red-600 dark:text-red-400 font-black">"{students.find(s => s.id === deletingStudentId)?.name}"</span> এর সকল তথ্য চিরতরে মুছে ফেলতে চান? এই কাজটি আর ফেরত নেওয়া যাবে না।
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeletingStudentId(null)} 
+                className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-xl font-black text-sm"
+              >
+                না, থাক
+              </button>
+              <button 
+                onClick={async () => {
+                  if (deletingStudentId) {
+                    setIsProcessing(true);
+                    const success = await onDeleteStudent(deletingStudentId);
+                    if (success) {
+                      setDeletingStudentId(null);
+                    }
+                    setIsProcessing(false);
+                  }
+                }} 
+                disabled={isProcessing}
+                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-sm shadow-lg shadow-red-600/20"
+              >
+                {isProcessing ? <i className="fas fa-spinner animate-spin"></i> : 'হ্যাঁ, মুছুন'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

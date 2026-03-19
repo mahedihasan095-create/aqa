@@ -333,8 +333,8 @@ const App: React.FC = () => {
               return false;
             }}
             onDeleteStudent={async (id) => {
-              const { error } = await supabase!.from('students').delete().eq('id', id);
-              if (!error) { setStudents(prev => prev.filter(s => s.id !== id)); return true; }
+              const { error } = await supabase!.from('students').update({ status: 'inactive' }).eq('id', id);
+              if (!error) { setStudents(prev => prev.map(s => s.id === id ? { ...s, status: 'inactive' } : s)); return true; }
               handleSupabaseError(error, 'Deleting Student');
               return false;
             }}

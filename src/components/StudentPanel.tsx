@@ -105,14 +105,24 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     const targetYear = searchType === 'BATCH' ? batchFilter.year : indivSearch.year;
     const targetExam = searchType === 'BATCH' ? batchFilter.exam : indivSearch.exam;
     
-    const classStudents = students.filter(s => s.studentClass === targetClass && s.year === targetYear && s.status !== 'inactive');
-    const scores = classStudents.map(student => {
+    // Use publishedResults to find all students who have a result for this class/year/exam
+    // This ensures that even if a student is deleted, they still appear in the merit list
+    const resultsForExam = publishedResults.filter(r => 
+      r.class === targetClass && 
+      r.year === targetYear && 
+      (targetExam === 'বার্ষিক পরীক্ষা' ? true : r.examName === targetExam)
+    );
+
+    // Get unique student IDs from these results
+    const uniqueStudentIds = Array.from(new Set(resultsForExam.map(r => r.studentId)));
+
+    const scores = uniqueStudentIds.map(studentId => {
       if (targetExam === 'বার্ষিক পরীক্ষা') {
-        const stats = calculateGrandAverage(student.id, targetClass, targetYear);
-        return { studentId: student.id, score: parseFloat(stats.average), hasResult: stats.hasAnnual };
+        const stats = calculateGrandAverage(studentId, targetClass, targetYear);
+        return { studentId, score: parseFloat(stats.average), hasResult: stats.hasAnnual };
       } else {
-        const res = getSpecificResult(student.id, targetClass, targetYear, targetExam);
-        return { studentId: student.id, score: res?.totalMarks || 0, hasResult: !!res };
+        const res = getSpecificResult(studentId, targetClass, targetYear, targetExam);
+        return { studentId, score: res?.totalMarks || 0, hasResult: !!res };
       }
     });
     return scores.filter(s => s.hasResult).sort((a, b) => b.score - a.score);
@@ -124,14 +134,32 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   };
 
   const handleSearch = () => {
-    const student = students.find(s => 
-      s.roll.toString() === indivSearch.roll.toString() && 
-      s.studentClass === indivSearch.class && 
-      s.year === indivSearch.year &&
-      s.status !== 'inactive'
+    const res = publishedResults.find(r => 
+      r.studentRoll.toString() === indivSearch.roll.toString() && 
+      r.class === indivSearch.class && 
+      r.year === indivSearch.year &&
+      r.examName === indivSearch.exam
     );
-    if (!student) { alert('শিক্ষার্থী পাওয়া যায়নি।'); return; }
-    setFoundStudent(student);
+    
+    if (!res) {
+      alert('ফলাফল পাওয়া যায়নি।'); 
+      return; 
+    }
+    
+    // Construct a Student object from the result snapshot
+    const studentSnapshot: Student = {
+      id: res.studentId,
+      name: res.studentName,
+      roll: res.studentRoll,
+      studentClass: res.studentClass,
+      year: res.studentYear,
+      fatherName: res.studentFatherName || '',
+      motherName: res.studentMotherName || '',
+      village: res.studentVillage || '',
+      mobile: res.studentMobile || ''
+    };
+    
+    setFoundStudent(studentSnapshot);
     setSearched(true);
   };
 
@@ -348,30 +376,37 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                     </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-gray-700 text-gray-800 dark:text-gray-200">
-                    {students.filter(s => s.studentClass === batchFilter.class && s.year === batchFilter.year).sort((a,b) => {
-                      if (batchSortBy === 'ROLL') {
-                        return parseInt(a.roll) - parseInt(b.roll);
-                      }
-                      
-                      const resA = getSpecificResult(a.id, batchFilter.class, batchFilter.year, batchFilter.exam);
-                      const resB = getSpecificResult(b.id, batchFilter.class, batchFilter.year, batchFilter.exam);
-                      if (isAnnualView) {
-                        return parseFloat(calculateGrandAverage(b.id, batchFilter.class, batchFilter.year).average) - parseFloat(calculateGrandAverage(a.id, batchFilter.class, batchFilter.year).average);
-                      }
-                      return (resB?.totalMarks || 0) - (resA?.totalMarks || 0);
-                    }).map(s => {
-                      const res = getSpecificResult(s.id, batchFilter.class, batchFilter.year, batchFilter.exam);
-                      if (!res) return null;
-                      
-                      const annualStats = isAnnualView ? calculateGrandAverage(s.id, batchFilter.class, batchFilter.year) : null;
-                      
-                      return (
-                        <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
-                          <td className="compact-td font-black text-indigo-700 dark:text-indigo-400">{s.roll}</td>
-                          <td className="compact-td font-bold text-left">{s.name}</td>
+                    {publishedResults
+                      .filter(r => r.class === batchFilter.class && r.year === batchFilter.year && (isAnnualView ? true : r.examName === batchFilter.exam))
+                      .reduce((acc, current) => {
+                        const x = acc.find(item => item.studentId === current.studentId);
+                        if (!x) return acc.concat([current]);
+                        return acc;
+                      }, [] as Result[])
+                      .sort((a, b) => {
+                        if (batchSortBy === 'ROLL') return parseInt(a.studentRoll) - parseInt(b.studentRoll);
+                        if (isAnnualView) {
+                          return parseFloat(calculateGrandAverage(b.studentId, batchFilter.class, batchFilter.year).average) - parseFloat(calculateGrandAverage(a.studentId, batchFilter.class, batchFilter.year).average);
+                        }
+                        const resA = getSpecificResult(a.studentId, batchFilter.class, batchFilter.year, batchFilter.exam);
+                        const resB = getSpecificResult(b.studentId, batchFilter.class, batchFilter.year, batchFilter.exam);
+                        return (resB?.totalMarks || 0) - (resA?.totalMarks || 0);
+                      })
+                      .map(resSnapshot => {
+                        const sId = resSnapshot.studentId;
+                        const res = getSpecificResult(sId, batchFilter.class, batchFilter.year, batchFilter.exam);
+                        if (!res && !isAnnualView) return null;
+                        
+                        const annualStats = isAnnualView ? calculateGrandAverage(sId, batchFilter.class, batchFilter.year) : null;
+                        if (isAnnualView && !annualStats?.hasAnnual) return null;
+                        
+                        return (
+                          <tr key={sId} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
+                            <td className="compact-td font-black text-indigo-700 dark:text-indigo-400">{resSnapshot.studentRoll}</td>
+                            <td className="compact-td font-bold text-left">{resSnapshot.studentName}</td>
                           
                           {(classSubjectsMap[batchFilter.class] || []).map(sub => (
-                            <td key={sub} className="compact-td font-bold">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
+                            <td key={sub} className="compact-td font-bold">{res?.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
                           ))}
 
                           {isAnnualView ? (
@@ -382,15 +417,15 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                               <td className="compact-td font-black text-indigo-700 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10">{annualStats?.average}</td>
                             </>
                           ) : (
-                            <td className="compact-td font-black text-indigo-700 dark:text-indigo-300">{res.totalMarks}</td>
+                            <td className="compact-td font-black text-indigo-700 dark:text-indigo-300">{res?.totalMarks}</td>
                           )}
                           
                           <td className="compact-td font-bold">
-                            <span className={`px-1 rounded text-[9px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
-                              {res.grade}
+                            <span className={`px-1 rounded text-[9px] font-black ${res?.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                              {res?.grade}
                             </span>
                           </td>
-                          <td className="compact-td font-black text-amber-600">#{getRank(s.id)}</td>
+                          <td className="compact-td font-black text-amber-600">#{getRank(sId)}</td>
                         </tr>
                       )
                     }).filter(r => r !== null)}

@@ -8,7 +8,6 @@ export interface Student {
   mobile: string;
   studentClass: string;
   year: string;
-  status?: 'active' | 'inactive';
 }
 
 export interface SubjectMarks {
@@ -21,6 +20,12 @@ export interface Result {
   studentId: string;
   studentName: string;
   studentRoll: string;
+  studentClass: string;
+  studentYear: string;
+  studentFatherName?: string;
+  studentMotherName?: string;
+  studentVillage?: string;
+  studentMobile?: string;
   examName: string;
   class: string;
   year: string;
