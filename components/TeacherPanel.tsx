@@ -56,6 +56,24 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
 
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger'
+  });
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, type });
+  };
+
   const groupedResults = useMemo(() => {
     const groups: Record<string, { class: string, year: string, examName: string, results: Result[], isPublished: boolean, totalStudents: number }> = {};
     results.forEach(res => {
@@ -93,19 +111,16 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
-  const handleDeleteGroup = async (key: string) => {
-    if (!confirm('আপনি কি এই গ্রুপের সকল রেজাল্ট মুছতে চান?')) return;
-    const group = groupedResults.find(g => g.key === key);
-    if (!group) return;
-    setIsProcessing(true);
-    // We need to delete one by one or have a bulk delete. 
-    // Since onSaveResults is bulk, maybe we can use it if the backend supports it, 
-    // but onDeleteResult is single. Let's use single for now or check if we can add bulk delete.
-    // For now, let's just do single deletes in a loop.
-    for (const res of group.results) {
-      await onDeleteResult(res.id);
-    }
-    setIsProcessing(false);
+  const handleDeleteGroup = (key: string) => {
+    showConfirm('গ্রুপ মুছুন', 'আপনি কি নিশ্চিত যে আপনি এই গ্রুপের সকল রেজাল্ট মুছতে চান?', async () => {
+      const group = groupedResults.find(g => g.key === key);
+      if (!group) return;
+      setIsProcessing(true);
+      for (const res of group.results) {
+        await onDeleteResult(res.id);
+      }
+      setIsProcessing(false);
+    });
   };
 
   const [studentFilterClass, setStudentFilterClass] = useState('সব');
@@ -354,11 +369,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setEditingNoticeId(notice.id);
   };
 
-  const handleDeleteNotice = async (id: string) => {
-    if (!confirm('আপনি কি এই নোটিশটি মুছতে চান?')) return;
-    setIsProcessing(true);
-    const success = await onUpdateNotices(notices.filter(n => n.id !== id));
-    setIsProcessing(false);
+  const handleDeleteNotice = (id: string) => {
+    showConfirm('নোটিশ মুছুন', 'আপনি কি নিশ্চিত যে আপনি এই নোটিশটি মুছতে চান?', async () => {
+      setIsProcessing(true);
+      const success = await onUpdateNotices(notices.filter(n => n.id !== id));
+      setIsProcessing(false);
+    });
   };
 
   const handleTogglePublish = async (resultId: string) => {
@@ -442,14 +458,15 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     }
   };
 
-  const handleDeleteSlide = async (index: number) => {
-    if (!confirm('আপনি কি এই ছবিটি মুছতে চান?')) return;
-    if (onUpdateSlideshowImages) {
-      setIsProcessing(true);
-      const newImages = slideshowImages.filter((_, i) => i !== index);
-      await onUpdateSlideshowImages(newImages);
-      setIsProcessing(false);
-    }
+  const handleDeleteSlide = (index: number) => {
+    showConfirm('ছবি মুছুন', 'আপনি কি নিশ্চিত যে আপনি এই ছবিটি মুছতে চান?', async () => {
+      if (onUpdateSlideshowImages) {
+        setIsProcessing(true);
+        const newImages = slideshowImages.filter((_, i) => i !== index);
+        await onUpdateSlideshowImages(newImages);
+        setIsProcessing(false);
+      }
+    });
   };
 
   const handleSaveSubjects = async () => {
@@ -478,6 +495,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       if (success) alert('শুভেচ্ছা বার্তা সেটিংস সফলভাবে আপডেট করা হয়েছে!');
       setIsProcessing(false);
     }
+  };
+
+  const handleDeleteStudent = (id: string, name: string) => {
+    showConfirm('শিক্ষার্থী মুছুন', `আপনি কি নিশ্চিত যে আপনি "${name}"-কে তালিকা থেকে মুছে ফেলতে চান?`, async () => {
+      setIsProcessing(true);
+      await onDeleteStudent(id);
+      setIsProcessing(false);
+    });
   };
 
   return (
@@ -561,7 +586,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                            <td className="p-4 text-center">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
-                                 <button onClick={() => onDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
+                                 <button onClick={() => handleDeleteStudent(student.id, student.name)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
                               </div>
                            </td>
                         </tr>
@@ -1145,6 +1170,50 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <button type="submit" disabled={isProcessing} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">আপডেট করুন</button>
                  </div>
               </form>
+           </div>
+        </div>
+      )}
+
+      {/* Global Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+           <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-[40px] p-8 shadow-2xl animate-scale-in text-center">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+                confirmModal.type === 'danger' ? 'bg-red-50 dark:bg-red-900/30' : 
+                confirmModal.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/30' : 
+                'bg-blue-50 dark:bg-blue-900/30'
+              }`}>
+                <i className={`fas ${
+                  confirmModal.type === 'danger' ? 'fa-exclamation-triangle text-red-500' : 
+                  confirmModal.type === 'warning' ? 'fa-exclamation-circle text-amber-500' : 
+                  'fa-info-circle text-blue-500'
+                } text-3xl`}></i>
+              </div>
+              <h2 className="text-2xl font-black mb-2 text-gray-900 dark:text-gray-100">{confirmModal.title}</h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-8 font-bold">
+                {confirmModal.message}
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} 
+                  className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-2xl font-black hover:bg-gray-200 transition-colors"
+                >
+                  না, ফিরে যান
+                </button>
+                <button 
+                  onClick={async () => {
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    await confirmModal.onConfirm();
+                  }} 
+                  className={`flex-1 py-4 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 ${
+                    confirmModal.type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 
+                    confirmModal.type === 'warning' ? 'bg-amber-600 hover:bg-amber-700' : 
+                    'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  হ্যাঁ, নিশ্চিত করুন
+                </button>
+              </div>
            </div>
         </div>
       )}
