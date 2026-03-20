@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Student, Result, ViewType, Notice } from './types';
 import TeacherPanel from './components/TeacherPanel';
-import StudentPanel from './components/StudentPanel';
+import StudentPanel from './components/StudentPanelComponent';
 import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
 import { supabase } from './supabase';
