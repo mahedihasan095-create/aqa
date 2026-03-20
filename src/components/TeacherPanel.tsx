@@ -130,6 +130,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     );
 
     relevantResults.forEach(res => {
+      if (!res.studentId) return;
       const studentMarks: Record<string, string> = {};
       res.marks.forEach(m => {
         studentMarks[m.subjectName] = m.marks.toString();
@@ -218,8 +219,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         marksObj[m.subjectName] = m.marks;
       });
       return {
-        'রোল': student?.roll || '',
-        'নাম': student?.name || '',
+        'রোল': student?.roll || r.studentRoll || '',
+        'নাম': student?.name || r.studentName || '',
         'শ্রেণী': r.class,
         'পরীক্ষা': r.examName,
         'সাল': r.year,

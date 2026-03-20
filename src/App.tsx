@@ -345,13 +345,6 @@ const App: React.FC = () => {
               return false;
             }}
             onDeleteStudent={async (id) => {
-              // Check if student has published results
-              const hasPublishedResults = results.some(r => r.studentId === id && r.isPublished);
-              if (hasPublishedResults) {
-                alert('এই শিক্ষার্থীর পাবলিশকৃত রেজাল্ট রয়েছে, তাই তাকে ডিলিট করা যাবে না। আগে রেজাল্ট আনপাবলিশ বা ডিলিট করুন।');
-                return false;
-              }
-              
               const { error } = await supabase!.from('students').delete().eq('id', id);
               if (!error) { setStudents(prev => prev.filter(s => s.id !== id)); return true; }
               handleSupabaseError(error, 'Deleting Student');

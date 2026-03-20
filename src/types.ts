@@ -17,7 +17,7 @@ export interface SubjectMarks {
 
 export interface Result {
   id: string;
-  studentId: string;
+  studentId: string | null;
   studentName: string;
   studentRoll: string;
   fatherName: string;

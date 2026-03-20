@@ -72,16 +72,17 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     setFoundStudent(null);
   }, [indivSearch.roll, indivSearch.class, indivSearch.year, indivSearch.exam, searchType]);
 
-  const getSpecificResult = (studentId: string, className: string, year: string, examName: string) => {
+  const getSpecificResult = (studentId: string | null, className: string, year: string, examName: string) => {
     return publishedResults.find(r => 
       r.studentId === studentId && 
+      (studentId !== null || r.studentRoll === indivSearch.roll) &&
       r.class === className && 
       r.year === year && 
       r.examName.trim() === examName.trim()
     );
   };
 
-  const calculateGrandAverage = (studentId: string, className: string, year: string) => {
+  const calculateGrandAverage = (studentId: string | null, className: string, year: string) => {
     const r1 = getSpecificResult(studentId, className, year, 'প্রথম সাময়িক');
     const r2 = getSpecificResult(studentId, className, year, 'দ্বিতীয় সাময়িক');
     const r3 = getSpecificResult(studentId, className, year, 'বার্ষিক পরীক্ষা');
@@ -131,7 +132,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     }
   }, [publishedResults, indivSearch, batchFilter, searchType]);
 
-  const getRank = (studentId: string) => {
+  const getRank = (studentId: string | null) => {
     const index = classRanking.findIndex(item => item.studentId === studentId);
     return index !== -1 ? index + 1 : '-';
   };
@@ -160,7 +161,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     } else {
       // Create a dummy student object from the result snapshot for compatibility
       const snapshotStudent: Student = {
-        id: result.studentId,
+        id: result.studentId || `deleted-${result.studentRoll}`,
         roll: result.studentRoll,
         name: result.studentName,
         fatherName: result.fatherName,
