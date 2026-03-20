@@ -64,7 +64,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, setView, darkMode, setDark
             </div>
             <div className="flex flex-col">
               <span className="text-base md:text-xl font-black tracking-tight leading-none">আনওয়ারুল কুরআন একাডেমী</span>
-              <span className="text-[10px] md:text-xs opacity-80 mt-1 font-medium hidden sm:block">আধুনিক ইসলামী ও জেনারেল শিক্ষা প্রতিষ্ঠান</span>
+              <span className="text-[10px] md:text-xs opacity-80 mt-1 font-medium hidden sm:block">আধুনিক ইসলামী শিক্ষা প্রতিষ্ঠান</span>
             </div>
           </div>
           
