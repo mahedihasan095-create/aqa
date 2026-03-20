@@ -465,7 +465,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   return (
     <div className="space-y-6">
       {/* Mobile-Friendly Sub-Navigation */}
-      <div className="no-print bg-white/80 dark:bg-gray-800/80 backdrop-blur-md p-2 rounded-2xl shadow-xl border dark:border-gray-700 overflow-x-auto scrollbar-hide sticky top-[80px] z-40">
+      <div className="no-print bg-white/80 dark:bg-gray-800/80 backdrop-blur-md p-2 rounded-2xl shadow-xl overflow-x-auto scrollbar-hide sticky top-[80px] z-40">
         <div className="flex min-w-max gap-2 px-1">
           {[
             { id: 'STUDENT_LIST', label: 'ছাত্র তালিকা', icon: 'fa-users' },
@@ -493,25 +493,25 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {/* View: Student List */}
       {activeSubView === 'STUDENT_LIST' && (
         <div className="animate-fade-in space-y-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-2xl border dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-2xl">
              <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শিক্ষার্থী তালিকা ({filteredStudents.length})</h2>
                 <div className="flex gap-2 w-full md:w-auto">
                    <button 
                      onClick={downloadStudentsExcel}
-                     className="p-2.5 rounded-xl border border-green-200 bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm"
+                     className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm"
                      title="এক্সেল ডাউনলোড করুন"
                    >
                      <i className="fas fa-file-excel"></i> <span className="hidden sm:inline">ডাউনলোড</span>
                    </button>
-                   <select className="p-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
+                   <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
                       <option value="সব">সব শ্রেণী</option>
                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                    </select>
                    <input 
                      type="text" 
                      placeholder="নাম বা রোল দিয়ে খুঁজুন..." 
-                     className="flex-grow md:w-64 p-2.5 rounded-xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                     className="flex-grow md:w-64 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
                      value={studentSearch}
                      onChange={e => setStudentSearch(e.target.value)}
                    />
@@ -519,7 +519,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
              </div>
 
              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left">
                    <thead className="bg-indigo-50 dark:bg-indigo-900/20 text-[10px] font-black uppercase text-indigo-400">
                       <tr>
                          <th className="p-4 rounded-tl-xl">রোল</th>
@@ -531,7 +531,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                          <th className="p-4 rounded-tr-xl text-center">অ্যাকশন</th>
                       </tr>
                    </thead>
-                   <tbody className="divide-y dark:divide-gray-700">
+                   <tbody className="">
                       {filteredStudents.map(student => (
                         <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                            <td className="p-4 font-black text-indigo-600 dark:text-indigo-400">{student.roll}</td>
@@ -561,7 +561,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {/* View: Enroll Student - Compressed View */}
       {activeSubView === 'ENROLL' && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 animate-fade-in">
-           <div className="lg:col-span-3 bg-white dark:bg-gray-800 p-5 md:p-6 rounded-[32px] shadow-2xl border dark:border-gray-700">
+           <div className="lg:col-span-3 bg-white dark:bg-gray-800 p-5 md:p-6 rounded-[32px] shadow-2xl">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-black text-indigo-900 dark:text-indigo-300">নতুন শিক্ষার্থী ভর্তি ফরম</h2>
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-400 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 rounded-full">
@@ -618,7 +618,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <button onClick={() => fileInputRef.current?.click()} className="w-full py-2.5 bg-white text-green-700 rounded-xl font-black shadow-md hover:bg-green-50 transition-all active:scale-95 text-xs flex items-center justify-center gap-2">
                       <i className="fas fa-upload"></i> ফাইল আপলোড
                     </button>
-                    <button onClick={downloadSampleExcel} className="w-full py-2.5 bg-green-800/40 text-white rounded-xl font-black border border-green-500/30 hover:bg-green-800/60 transition-all active:scale-95 text-[10px] flex items-center justify-center gap-2">
+                    <button onClick={downloadSampleExcel} className="w-full py-2.5 bg-green-800/40 text-white rounded-xl font-black hover:bg-green-800/60 transition-all active:scale-95 text-[10px] flex items-center justify-center gap-2">
                       <i className="fas fa-download"></i> নমুনা ফাইল ডাউনলোড
                     </button>
                  </div>
@@ -626,7 +626,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  <i className="fas fa-file-excel absolute -bottom-2 -right-2 text-6xl text-white/10 rotate-12 group-hover:scale-110 transition-transform"></i>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-[32px] border dark:border-gray-700 shadow-lg">
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-[32px] shadow-lg">
                  <div className="flex items-center gap-3">
                    <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
                      <i className="fas fa-users text-indigo-600"></i>
@@ -644,7 +644,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {/* View: Result Entry */}
       {activeSubView === 'RESULT_ENTRY' && (
         <div className="animate-fade-in space-y-4">
-          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-[32px] shadow-2xl border dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-[32px] shadow-2xl">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-3">
@@ -653,17 +653,17 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <p className="text-xs text-gray-500 mt-1 font-bold">শ্রেণী ও পরীক্ষা নির্বাচন করে নম্বর প্রদান করুন</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={downloadResultSampleExcel} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-4 py-2.5 rounded-xl text-xs font-black border border-blue-200 dark:border-blue-800 flex items-center gap-2 hover:bg-blue-100 transition-colors">
+                <button onClick={downloadResultSampleExcel} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-blue-100 transition-colors">
                   <i className="fas fa-download"></i> নমুনা ফাইল
                 </button>
-                <button onClick={() => resultExcelRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2.5 rounded-xl text-xs font-black border border-green-200 dark:border-green-800 flex items-center gap-2 hover:bg-green-100 transition-colors">
+                <button onClick={() => resultExcelRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-green-100 transition-colors">
                   <i className="fas fa-file-excel"></i> ইমপোর্ট
                 </button>
                 <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" />
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-900/50">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl">
               <div className="space-y-1">
                  <label className="text-[10px] font-black text-indigo-400 uppercase ml-1">শ্রেণী</label>
                  <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 font-bold" value={entryConfig.class} onChange={e => setEntryConfig({...entryConfig, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
@@ -679,7 +679,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-400">
                   <tr>
                     <th className="p-4 text-left">রোল ও নাম</th>
@@ -687,7 +687,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <th className="p-4 text-center">মোট ও গ্রেড</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y dark:divide-gray-700">
+                <tbody className="">
                   {students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll)).map(student => {
                     const currentMarks = bulkMarks[student.id] || {};
                     const classSubjects = subjects[entryConfig.class] || [];
@@ -703,7 +703,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                           <td key={sub} className="p-2 text-center">
                             <input 
                               type="number" 
-                              className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 rounded-lg outline-none font-bold text-sm border focus:border-indigo-500 no-spinner" 
+                              className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 rounded-lg outline-none font-bold text-sm no-spinner" 
                               value={currentMarks[sub] || ''} 
                               placeholder="0" 
                               onChange={e => setBulkMarks(prev => ({ ...prev, [student.id]: { ...(prev[student.id] || {}), [sub]: e.target.value } }))} 
@@ -733,18 +733,18 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {/* View: Manage Results (Publishing) */}
       {activeSubView === 'MANAGE_RESULTS' && (
         <div className="animate-fade-in space-y-4">
-           <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-2xl border dark:border-gray-700">
+           <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-2xl">
               <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                  <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">রেজাল্ট পাবলিশ ম্যানেজমেন্ট</h2>
                  <button 
                    onClick={downloadResultsExcel}
-                   className="p-2.5 rounded-xl border border-green-200 bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm w-full md:w-auto justify-center"
+                   className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm w-full md:w-auto justify-center"
                  >
                    <i className="fas fa-file-excel"></i> এক্সেল ডাউনলোড করুন
                  </button>
               </div>
               <div className="overflow-x-auto">
-                 <table className="w-full text-left border-collapse">
+                 <table className="w-full text-left">
                     <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black uppercase text-gray-400">
                        <tr>
                           <th className="p-4">শ্রেণী ও সাল</th>
@@ -754,7 +754,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                           <th className="p-4 text-center">অ্যাকশন</th>
                        </tr>
                     </thead>
-                    <tbody className="divide-y dark:divide-gray-700">
+                    <tbody className="">
                        {groupedResults.map(group => {
                           return (
                             <tr key={group.key} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
@@ -794,7 +794,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
            <div className="lg:col-span-2 space-y-4">
               {notices.map(notice => (
-                <div key={notice.id} className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border dark:border-gray-700 flex justify-between items-start group">
+                <div key={notice.id} className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl flex justify-between items-start group">
                    <div>
                       <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mb-2 inline-block">{notice.date}</span>
                       <p className="font-bold text-gray-800 dark:text-gray-200">{notice.text}</p>
@@ -808,7 +808,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
               {notices.length === 0 && <div className="p-20 text-center text-gray-400 font-bold bg-white dark:bg-gray-800 rounded-3xl">কোনো নোটিশ নেই।</div>}
            </div>
            
-           <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700 h-fit">
+           <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl h-fit">
               <div className="flex justify-between items-center mb-6">
                  <h3 className="text-xl font-black flex items-center gap-2">
                     <i className={`fas ${editingNoticeId ? 'fa-edit' : 'fa-plus-circle'} text-indigo-500`}></i> 
@@ -836,14 +836,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       {activeSubView === 'SETTINGS' && (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
           {/* Backup & Export Section */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl">
             <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
               <i className="fas fa-images text-indigo-500"></i> স্লাইডশো ইমেজ ম্যানেজমেন্ট
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {slideshowImages.map((slide, idx) => (
-                <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-3xl border dark:border-gray-700 space-y-3">
-                  <div className="relative group aspect-video rounded-2xl overflow-hidden border dark:border-gray-700 shadow-md">
+                <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-3xl space-y-3">
+                  <div className="relative group aspect-video rounded-2xl overflow-hidden shadow-md">
                     <img src={slide.url} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <button 
@@ -873,7 +873,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
               {slideshowImages.length < 4 && (
                 <button 
                   onClick={() => slideshowInputRef.current?.click()}
-                  className="aspect-video rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-2 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all group"
+                  className="aspect-video rounded-3xl flex flex-col items-center justify-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all group"
                 >
                   <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                     <i className="fas fa-plus"></i>
@@ -887,7 +887,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
           </div>
 
           {/* Backup & Export Section */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl">
             <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
                <i className="fas fa-database text-indigo-500"></i> ব্যাকআপ ও এক্সপোর্ট
             </h2>
@@ -903,7 +903,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
           </div>
 
           {/* Subject Management */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl">
             <h2 className="text-2xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-3">
                <i className="fas fa-book text-indigo-500"></i> শ্রেণী অনুযায়ী বিষয় ব্যবস্থাপনা
             </h2>
@@ -943,14 +943,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             </p>
 
             {/* Display Current Subjects */}
-            <div className="mt-8 pt-8 border-t dark:border-gray-700">
+            <div className="mt-8 pt-8">
               <h3 className="text-sm font-black mb-4 text-gray-500 uppercase tracking-wider flex items-center gap-2">
                 <i className="fas fa-list-ul"></i> {subjectClass} শ্রেণীর বর্তমান বিষয়সমূহ:
               </h3>
               <div className="flex flex-wrap gap-2">
                 {subjects[subjectClass] && subjects[subjectClass].length > 0 ? (
                   subjects[subjectClass].map((sub, i) => (
-                    <span key={i} className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-xl text-sm font-bold border border-indigo-100 dark:border-indigo-800 animate-fade-in">
+                    <span key={i} className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-xl text-sm font-bold animate-fade-in">
                       {sub}
                     </span>
                   ))
@@ -962,12 +962,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
           </div>
 
           {/* Logo Upload */}
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl border dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-2xl">
             <h2 className="text-2xl font-black mb-8 text-gray-900 dark:text-gray-100 flex items-center gap-3">
                <i className="fas fa-image text-amber-500"></i> স্কুলের লোগো সেট করুন
             </h2>
             <div className="flex flex-col md:flex-row items-center gap-10">
-              <div className="flex-shrink-0 w-44 h-44 bg-gray-50 dark:bg-gray-700 rounded-[32px] border-4 border-dashed border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden shadow-inner group relative">
+              <div className="flex-shrink-0 w-44 h-44 bg-gray-50 dark:bg-gray-700 rounded-[32px] flex items-center justify-center overflow-hidden shadow-inner group relative">
                 {schoolLogo ? (
                   <img src={schoolLogo} alt="School Logo" className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform" />
                 ) : (
@@ -989,7 +989,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <i className="fas fa-plus-circle"></i> নতুন লোগো
                   </button>
                   {schoolLogo && (
-                    <button onClick={() => onUpdateSchoolLogo('')} className="bg-red-50 text-red-600 px-6 py-3.5 rounded-2xl font-black text-sm border border-red-100 hover:bg-red-100 transition-all">মুছে ফেলুন</button>
+                    <button onClick={() => onUpdateSchoolLogo('')} className="bg-red-50 text-red-600 px-6 py-3.5 rounded-2xl font-black text-sm hover:bg-red-100 transition-all">মুছে ফেলুন</button>
                   )}
                 </div>
                 <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
@@ -998,29 +998,29 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             <div className="bg-white dark:bg-gray-800 p-8 rounded-[32px] shadow-xl border dark:border-gray-700">
+             <div className="bg-white dark:bg-gray-800 p-8 rounded-[32px] shadow-xl">
                <h2 className="text-xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <i className="fas fa-lock text-red-500"></i> নিরাপত্তা পাসওয়ার্ড
                </h2>
                <div className="space-y-4">
-                 <input type="password" placeholder="নতুন পাসওয়ার্ড দিন" className="w-full p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-indigo-500 transition-all shadow-inner font-bold" value={newPass} onChange={e => setNewPass(e.target.value)} />
+                 <input type="password" placeholder="নতুন পাসওয়ার্ড দিন" className="w-full p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none text-sm transition-all shadow-inner font-bold" value={newPass} onChange={e => setNewPass(e.target.value)} />
                  <button onClick={() => onUpdatePassword(newPass)} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95">পাসওয়ার্ড আপডেট করুন</button>
                </div>
              </div>
 
-             <div className="bg-white dark:bg-gray-800 p-8 rounded-[32px] shadow-xl border dark:border-gray-700">
+             <div className="bg-white dark:bg-gray-800 p-8 rounded-[32px] shadow-xl">
                <h2 className="text-xl font-black mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <i className="fas fa-pen-nib text-indigo-500"></i> অধ্যক্ষের স্বাক্ষর
                </h2>
                <div className="flex flex-col items-center text-center space-y-4">
-                 <div className="w-full h-24 bg-gray-50 dark:bg-gray-700 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden shadow-inner">
+                 <div className="w-full h-24 bg-gray-50 dark:bg-gray-700 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
                     {principalSignature ? (
                       <img src={principalSignature} alt="Principal Signature" className="max-w-full max-h-full object-contain p-2" />
                     ) : (
                       <span className="text-[10px] text-gray-400 font-black uppercase">স্বাক্ষর যোগ করা হয়নি</span>
                     )}
                  </div>
-                 <button onClick={() => sigInputRef.current?.click()} className="w-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 py-3.5 rounded-2xl font-black text-sm border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-all active:scale-95">
+                 <button onClick={() => sigInputRef.current?.click()} className="w-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 py-3.5 rounded-2xl font-black text-sm hover:bg-indigo-100 transition-all active:scale-95">
                     <i className="fas fa-upload mr-2"></i> স্বাক্ষর আপলোড
                  </button>
                  <input type="file" ref={sigInputRef} className="hidden" accept="image/*" onChange={handleSigUpload} />

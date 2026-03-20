@@ -51,11 +51,11 @@ const DefaultLogo = () => (
 
 const Navbar: React.FC<NavbarProps> = ({ currentView, setView, darkMode, setDarkMode, isTeacherAuthenticated, onLogout, logo }) => {
   return (
-    <nav className="bg-gradient-to-r from-indigo-700 to-indigo-900 dark:from-gray-900 dark:to-indigo-950 text-white shadow-2xl no-print sticky top-0 z-[100] border-b border-white/10 backdrop-blur-md">
+    <nav className="bg-gradient-to-r from-indigo-700 to-indigo-900 dark:from-gray-900 dark:to-indigo-950 text-white shadow-2xl no-print sticky top-0 z-[100] backdrop-blur-md">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-20">
           <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => setView('DASHBOARD')}>
-            <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center overflow-hidden border-2 border-white group-hover:scale-105 transition-transform duration-300 p-0.5">
+            <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300 p-0.5">
               {logo ? (
                 <img src={logo} alt="Logo" className="w-full h-full object-contain" />
               ) : (
@@ -116,7 +116,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, setView, darkMode, setDark
             {isTeacherAuthenticated && currentView === 'TEACHER_DASHBOARD' && onLogout && (
               <button
                 onClick={onLogout}
-                className="p-2.5 sm:px-4 sm:py-2.5 bg-red-500/20 hover:bg-red-500 text-red-100 rounded-xl transition-all font-bold flex items-center gap-2 border border-red-500/30"
+                className="p-2.5 sm:px-4 sm:py-2.5 bg-red-500/20 hover:bg-red-500 text-red-100 rounded-xl transition-all font-bold flex items-center gap-2"
               >
                 <i className="fas fa-sign-out-alt"></i>
                 <span className="hidden md:inline">লগআউট</span>

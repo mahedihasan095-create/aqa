@@ -139,27 +139,27 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 no-print">
-        <button onClick={() => setSearchType('INDIVIDUAL')} className={`flex-1 py-4 rounded-xl border-2 transition-all font-bold ${searchType === 'INDIVIDUAL' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-700'}`}>একক মার্কশিট</button>
-        <button onClick={() => setSearchType('BATCH')} className={`flex-1 py-4 rounded-xl border-2 transition-all font-bold ${searchType === 'BATCH' ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-700'}`}>শ্রেণী ভিত্তিক মেধা তালিকা</button>
+        <button onClick={() => setSearchType('INDIVIDUAL')} className={`flex-1 py-4 rounded-xl transition-all font-bold ${searchType === 'INDIVIDUAL' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>একক মার্কশিট</button>
+        <button onClick={() => setSearchType('BATCH')} className={`flex-1 py-4 rounded-xl transition-all font-bold ${searchType === 'BATCH' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>শ্রেণী ভিত্তিক মেধা তালিকা</button>
       </div>
 
       {searchType === 'INDIVIDUAL' && (
         <div className="space-y-8 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-md border dark:border-gray-700 max-w-2xl mx-auto no-print">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-md max-w-2xl mx-auto no-print">
             <h3 className="text-xl font-black mb-6 text-indigo-900 dark:text-indigo-300 text-center">ফলাফল অনুসন্ধান</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">শ্রেণী</label><select className="w-full p-2.5 border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.class} onChange={e => setIndivSearch({...indivSearch, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">সাল</label><select className="w-full p-2.5 border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.year} onChange={e => setIndivSearch({...indivSearch, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">পরীক্ষা</label><select className="w-full p-2.5 border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.exam} onChange={e => setIndivSearch({...indivSearch, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">রোল নম্বর</label><input type="text" className="w-full p-2.5 border dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.roll} onChange={e => setIndivSearch({...indivSearch, roll: e.target.value})} /></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">শ্রেণী</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.class} onChange={e => setIndivSearch({...indivSearch, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">সাল</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.year} onChange={e => setIndivSearch({...indivSearch, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">পরীক্ষা</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.exam} onChange={e => setIndivSearch({...indivSearch, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">রোল নম্বর</label><input type="text" className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.roll} onChange={e => setIndivSearch({...indivSearch, roll: e.target.value})} /></div>
               <div className="md:col-span-4 mt-2"><button onClick={handleSearch} className="w-full bg-indigo-600 text-white px-6 py-3.5 rounded-2xl font-black shadow-lg">ফলাফল দেখুন</button></div>
             </div>
           </div>
 
           {searched && foundStudent && (
             getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
-              <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[40px] shadow-2xl border border-gray-100 dark:border-gray-700 max-w-4xl mx-auto print-area overflow-hidden">
-                 <div className="text-center mb-4 border-b-2 border-indigo-50 dark:border-indigo-900 pb-4 print:pb-2 print:mb-2 print-header">
+              <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[40px] shadow-2xl max-w-4xl mx-auto print-area overflow-hidden">
+                 <div className="text-center mb-4 pb-4 print:pb-2 print:mb-2 print-header">
                    <div className="flex flex-col items-center justify-center">
                      <SchoolLogo size="w-16 h-16 md:w-20 md:h-20 mb-2" logo={logo} />
                      <h1 className="text-2xl md:text-4xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
@@ -171,13 +171,13 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  </div>
                  
                  <div className="grid grid-cols-2 mb-4 gap-3 text-[10px] md:text-xs text-gray-800 dark:text-gray-200">
-                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl border dark:border-gray-600">
+                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
                      <p><strong>নাম:</strong> {foundStudent.name}</p>
                      <p><strong>পিতা:</strong> {foundStudent.fatherName}</p>
                      <p><strong>মাতা:</strong> {foundStudent.motherName}</p>
                      <p><strong>গ্রাম:</strong> {foundStudent.village}</p>
                    </div>
-                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl border dark:border-gray-600">
+                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
                      <p><strong>রোল:</strong> {foundStudent.roll}</p>
                      <p><strong>শ্রেণী:</strong> {foundStudent.studentClass}</p>
                      <p><strong>শিক্ষাবর্ষ:</strong> {foundStudent.year}</p>
@@ -186,22 +186,22 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  </div>
                  
                  <div className="overflow-x-auto mb-4">
-                   <table className="w-full text-left border-collapse border border-gray-200 dark:border-gray-700 print-table">
+                   <table className="w-full text-left print-table">
                      <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px] md:text-xs">
                        <tr>
-                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700">বিষয়ের নাম</th>
-                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">পূর্ণমান</th>
-                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">প্রাপ্ত নম্বর</th>
-                         <th className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">গ্রেড</th>
+                         <th className="px-3 py-2">বিষয়ের নাম</th>
+                         <th className="px-3 py-2 text-center">পূর্ণমান</th>
+                         <th className="px-3 py-2 text-center">প্রাপ্ত নম্বর</th>
+                         <th className="px-3 py-2 text-center">গ্রেড</th>
                        </tr>
                      </thead>
                      <tbody className="text-gray-800 dark:text-gray-200 text-[10px] md:text-xs">
                        {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks.map(m => (
                          <tr key={m.subjectName}>
-                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 font-bold">{m.subjectName}</td>
-                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-center">১০০</td>
-                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-center font-black text-indigo-700 dark:text-indigo-400">{m.marks}</td>
-                           <td className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-center font-bold">
+                           <td className="px-3 py-1.5 font-bold">{m.subjectName}</td>
+                           <td className="px-3 py-1.5 text-center">১০০</td>
+                           <td className="px-3 py-1.5 text-center font-black text-indigo-700 dark:text-indigo-400">{m.marks}</td>
+                           <td className="px-3 py-1.5 text-center font-bold">
                              {m.marks >= 80 ? 'A+' : m.marks >= 70 ? 'A' : m.marks >= 60 ? 'A-' : m.marks >= 50 ? 'B' : m.marks >= 40 ? 'C' : m.marks >= 33 ? 'D' : 'F'}
                            </td>
                          </tr>
@@ -209,11 +209,11 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                      </tbody>
                      <tfoot className="bg-indigo-50 dark:bg-indigo-900/20 font-black text-gray-900 dark:text-gray-100 text-[10px] md:text-xs">
                        <tr>
-                         <td colSpan={2} className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-right uppercase tracking-wider">চলতি পরীক্ষার মোট নম্বর:</td>
-                         <td className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center text-sm md:text-lg text-indigo-700 dark:text-indigo-300">
+                         <td colSpan={2} className="px-3 py-2 text-right uppercase tracking-wider">চলতি পরীক্ষার মোট নম্বর:</td>
+                         <td className="px-3 py-2 text-center text-sm md:text-lg text-indigo-700 dark:text-indigo-300">
                            {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks}
                          </td>
-                         <td className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-center">
+                         <td className="px-3 py-2 text-center">
                            {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade}
                          </td>
                        </tr>
@@ -222,7 +222,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  </div>
 
                  {isAnnualView && (
-                   <div className="mt-4 border-t-2 border-indigo-100 dark:border-indigo-900 pt-3">
+                   <div className="mt-4 pt-3">
                      <h3 className="text-xs md:text-sm font-black text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
                        <i className="fas fa-chart-line"></i> বার্ষিক সমন্বিত ফলাফল (৩ পরীক্ষা)
                      </h3>
@@ -233,7 +233,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                          { label: 'বার্ষিক', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).annual, color: 'purple' },
                          { label: 'চূড়ান্ত গড়', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).average, color: 'green', isAvg: true }
                        ].map((item, idx) => (
-                         <div key={idx} className={`p-2 bg-${item.color}-50 dark:bg-${item.color}-900/20 border border-${item.color}-200 dark:border-${item.color}-800 rounded-xl text-center shadow-sm`}>
+                         <div key={idx} className={`p-2 bg-${item.color}-50 dark:bg-${item.color}-900/20 rounded-xl text-center shadow-sm`}>
                             <span className={`text-[8px] font-black text-${item.color}-600 dark:text-${item.color}-400 block uppercase`}>{item.label}</span>
                             <span className={`font-black ${item.isAvg ? 'text-sm md:text-lg' : 'text-xs md:text-sm'} text-${item.color}-700 dark:text-${item.color}-300`}>{item.value}</span>
                          </div>
@@ -243,23 +243,23 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  )}
 
                  <div className="mt-6 grid grid-cols-2 gap-3">
-                   <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800 text-center">
+                   <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-center">
                      <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 block mb-1 uppercase">শ্রেণীতে স্থান</span>
                      <span className="font-black text-2xl text-amber-700 dark:text-amber-300">#{getRank(foundStudent.id)}</span>
                    </div>
-                   <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-200 dark:border-green-800 text-center">
+                   <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl text-center">
                      <span className="text-[9px] font-black text-green-600 dark:text-green-400 block mb-1 uppercase">ফলাফল</span>
                      <span className="font-black text-xl text-green-700 dark:text-green-300">উত্তীর্ণ</span>
                    </div>
                  </div>
 
-                 <div className="mt-12 flex justify-between items-end border-t border-dashed dark:border-gray-700 pt-6 px-2 print-footer">
+                 <div className="mt-12 flex justify-between items-end pt-6 px-2 print-footer">
                    <div className="text-center">
-                     <div className="w-24 border-b border-gray-400 dark:border-gray-500 mb-1 mx-auto"></div>
+                     <div className="w-24 mb-1 mx-auto"></div>
                      <p className="text-[9px] font-bold text-gray-500">অভিভাবক</p>
                    </div>
                    <div className="text-center">
-                     <div className="w-24 border-b border-gray-400 dark:border-gray-500 mb-1 mx-auto"></div>
+                     <div className="w-24 mb-1 mx-auto"></div>
                      <p className="text-[9px] font-bold text-gray-500">শ্রেণী শিক্ষক</p>
                    </div>
                    <div className="text-center relative">
@@ -268,7 +268,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                          <img src={principalSignature} alt="Principal Signature" className="w-full h-full object-contain" />
                        </div>
                      )}
-                     <div className="w-24 border-b border-gray-400 dark:border-gray-500 mb-1 mx-auto"></div>
+                     <div className="w-24 mb-1 mx-auto"></div>
                      <p className="text-[9px] font-bold text-indigo-700 dark:text-indigo-400">অধ্যক্ষ</p>
                    </div>
                  </div>
@@ -279,7 +279,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  </div>
               </div>
             ) : (
-              <div className="text-center p-20 bg-amber-50 dark:bg-amber-900/20 rounded-[40px] max-w-xl mx-auto border border-amber-200 dark:border-amber-800 font-bold text-amber-700 dark:text-amber-400 shadow-xl">
+              <div className="text-center p-20 bg-amber-50 dark:bg-amber-900/20 rounded-[40px] max-w-xl mx-auto font-bold text-amber-700 dark:text-amber-400 shadow-xl">
                 <i className="fas fa-exclamation-triangle text-6xl mb-6 block text-amber-500"></i>
                 <p className="text-xl">ফলাফল এখনো প্রকাশিত হয়নি।</p>
               </div>
@@ -290,8 +290,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
 
       {searchType === 'BATCH' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-[40px] shadow-xl border dark:border-gray-700 overflow-hidden print-area">
-            <div className="p-8 bg-indigo-50 dark:bg-indigo-900/30 no-print border-b dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-[40px] shadow-xl overflow-hidden print-area">
+            <div className="p-8 bg-indigo-50 dark:bg-indigo-900/30 no-print">
               <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শ্রেণী ভিত্তিক মেধা তালিকা</h2>
                 <button onClick={() => window.print()} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2">
@@ -305,7 +305,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                 <div>
                   <label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">সাজানোর ধরণ</label>
                   <select 
-                    className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold border-2 border-indigo-200 dark:border-indigo-800" 
+                    className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" 
                     value={batchSortBy} 
                     onChange={e => setBatchSortBy(e.target.value as 'RANK' | 'ROLL')}
                   >
@@ -324,29 +324,29 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                 <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500">শ্রেণী ভিত্তিক মেধা তালিকা</h3>
               </div>
               <div className="overflow-x-auto scrollbar-hide">
-                <table className="w-full text-left border-collapse print-table">
+                <table className="w-full text-left print-table">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300 font-black text-[9px] uppercase tracking-tighter">
                     <tr>
-                      <th className="compact-th border-b dark:border-gray-600">রোল</th>
-                      <th className="compact-th border-b dark:border-gray-600 text-left min-w-[90px]">নাম</th>
+                      <th className="compact-th">রোল</th>
+                      <th className="compact-th text-left min-w-[90px]">নাম</th>
                       
-                      {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="compact-th border-b dark:border-gray-600">{s}</th>)}
+                      {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="compact-th">{s}</th>)}
                       
                       {isAnnualView ? (
                         <>
-                          <th className="compact-th border-b dark:border-gray-600 font-black">১ম</th>
-                          <th className="compact-th border-b dark:border-gray-600 font-black">২য়</th>
-                          <th className="compact-th border-b dark:border-gray-600 font-black">বার্ষিক</th>
-                          <th className="compact-th border-b dark:border-gray-600 font-black bg-gray-100 dark:bg-gray-700">গড়</th>
+                          <th className="compact-th font-black">১ম</th>
+                          <th className="compact-th font-black">২য়</th>
+                          <th className="compact-th font-black">বার্ষিক</th>
+                          <th className="compact-th font-black bg-gray-100 dark:bg-gray-700">গড়</th>
                         </>
                       ) : (
-                        <th className="compact-th border-b dark:border-gray-600 font-black">মোট</th>
+                        <th className="compact-th font-black">মোট</th>
                       )}
-                      <th className="compact-th border-b dark:border-gray-600">গ্রেড</th>
-                      <th className="compact-th border-b dark:border-gray-600">স্থান</th>
+                      <th className="compact-th">গ্রেড</th>
+                      <th className="compact-th">স্থান</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y dark:divide-gray-700 text-gray-800 dark:text-gray-200">
+                  <tbody className="text-gray-800 dark:text-gray-200">
                     {students.filter(s => s.studentClass === batchFilter.class && s.year === batchFilter.year).sort((a,b) => {
                       if (batchSortBy === 'ROLL') {
                         return parseInt(a.roll) - parseInt(b.roll);

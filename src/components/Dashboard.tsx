@@ -26,7 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
     <div className="max-w-5xl mx-auto space-y-4 animate-fade-in pb-10 px-2">
       {/* Notice Marquee */}
       {notices.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex items-center h-10 no-print">
+        <div className="bg-white dark:bg-gray-800 rounded-full shadow-sm overflow-hidden flex items-center h-10 no-print">
           <div className="bg-amber-500 text-white px-4 h-full flex items-center gap-1 shrink-0 z-10 shadow-[4px_0_8px_rgba(0,0,0,0.1)]">
             <i className="fas fa-bullhorn text-xs animate-pulse"></i>
             <span className="text-xs font-black whitespace-nowrap">নোটিশ:</span>
@@ -44,7 +44,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
                     className="text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mx-6 flex items-center shrink-0"
                   >
                     {displayMsg} <span className="text-amber-500 ml-1">({notice.date})</span>
-                    <span className="mx-6 text-gray-300 dark:text-gray-600">|</span>
                   </button>
                 );
               })}
@@ -55,7 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
 
       {/* Slideshow Section */}
       {slideshowImages.length > 0 && (
-        <div className="relative w-full aspect-[2/1] md:aspect-[2.5/1] rounded-[32px] overflow-hidden shadow-2xl border dark:border-white/10 group bg-gray-200 dark:bg-gray-800">
+        <div className="relative w-full aspect-[2/1] md:aspect-[2.5/1] rounded-[32px] overflow-hidden shadow-2xl group bg-gray-200 dark:bg-gray-800">
           {slideshowImages.map((slide, idx) => (
             <div 
               key={idx}
@@ -120,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
       )}
 
       {/* Hero Section - Super Compressed */}
-      <div className="bg-gradient-to-br from-indigo-900 to-indigo-700 dark:from-gray-800 dark:to-gray-900 p-4 md:p-6 rounded-[28px] shadow-xl relative overflow-hidden border border-white/10">
+      <div className="bg-gradient-to-br from-indigo-900 to-indigo-700 dark:from-gray-800 dark:to-gray-900 p-4 md:p-6 rounded-[28px] shadow-xl relative overflow-hidden">
         <div className="relative z-10 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex-grow">
             <span className="inline-block px-2 py-0.5 bg-white/20 backdrop-blur-md rounded-full text-[8px] font-black uppercase tracking-[1px] mb-2">প্রতিষ্ঠিত ২০১৯</span>
@@ -133,7 +132,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
           </div>
           
           <div className="flex items-center gap-3 shrink-0">
-             <div className="flex items-center gap-2 px-3 py-2 bg-indigo-600/50 backdrop-blur-md rounded-xl border border-white/20">
+             <div className="flex items-center gap-2 px-3 py-2 bg-indigo-600/50 backdrop-blur-md rounded-xl">
                 <div className="w-7 h-7 bg-indigo-400/30 rounded-full flex items-center justify-center">
                    <i className="fas fa-users text-white text-[10px]"></i>
                 </div>
@@ -160,7 +159,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
       <div className="grid grid-cols-2 gap-3">
         <div 
           onClick={() => setView('TEACHER_DASHBOARD')}
-          className="group cursor-pointer bg-white dark:bg-gray-800 p-3 md:p-4 rounded-[20px] shadow-sm border border-transparent hover:border-indigo-600 transition-all flex items-center gap-3"
+          className="group cursor-pointer bg-white dark:bg-gray-800 p-3 md:p-4 rounded-[20px] shadow-sm transition-all flex items-center gap-3"
         >
           <div className="bg-indigo-50 dark:bg-indigo-900/40 w-10 h-10 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
             <i className="fas fa-chalkboard-teacher text-sm text-indigo-600 dark:text-indigo-400 group-hover:text-white"></i>
@@ -173,7 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
 
         <div 
           onClick={() => setView('STUDENT_PORTAL')}
-          className="group cursor-pointer bg-white dark:bg-gray-800 p-3 md:p-4 rounded-[20px] shadow-sm border border-transparent hover:border-green-600 transition-all flex items-center gap-3"
+          className="group cursor-pointer bg-white dark:bg-gray-800 p-3 md:p-4 rounded-[20px] shadow-sm transition-all flex items-center gap-3"
         >
           <div className="bg-green-50 dark:bg-green-900/40 w-10 h-10 rounded-lg flex items-center justify-center group-hover:bg-green-600 transition-colors">
             <i className="fas fa-user-graduate text-sm text-green-700 dark:text-green-400 group-hover:text-white"></i>
@@ -186,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
       </div>
 
       {/* Notice Board - Now positioned directly underneath */}
-      <div className="bg-white dark:bg-gray-800 rounded-[24px] shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-[24px] shadow-md overflow-hidden">
         <div className="bg-amber-500 px-4 py-2 flex justify-between items-center">
           <h3 className="text-white font-black text-xs flex items-center gap-2">
             <i className="fas fa-bullhorn"></i> নোটিশ বোর্ড
@@ -198,7 +197,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
             <div 
               key={notice.id} 
               onClick={() => setSelectedNotice(notice)}
-              className="p-2.5 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-transparent hover:border-amber-400 hover:shadow-sm cursor-pointer transition-all active:scale-95 group flex flex-col justify-between"
+              className="p-2.5 bg-gray-50 dark:bg-gray-700/30 rounded-xl hover:shadow-sm cursor-pointer transition-all active:scale-95 group flex flex-col justify-between"
             >
               <p className="text-[10px] font-bold text-gray-800 dark:text-gray-200 leading-tight line-clamp-2 mb-1">{notice.text}</p>
               <span className="text-[8px] font-black text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full self-start">{notice.date}</span>
@@ -219,7 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
           { icon: 'fa-certificate', text: 'অফিসিয়াল' },
           { icon: 'fa-mobile-screen-button', text: 'রেসপন্সিভ' }
         ].map((item, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 p-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center justify-center gap-1 group">
+          <div key={i} className="bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm flex flex-col items-center justify-center gap-1 group">
             <i className={`fas ${item.icon} text-indigo-500 text-[10px]`}></i>
             <span className="text-[8px] font-black text-gray-400 uppercase leading-none">{item.text}</span>
           </div>

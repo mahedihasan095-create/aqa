@@ -272,11 +272,11 @@ const App: React.FC = () => {
             
             <div className="mt-12 text-center space-y-3">
               <div className="flex items-center justify-center gap-2">
-                <div className="h-px w-8 bg-indigo-200 dark:bg-indigo-900"></div>
+                {/* Removed lines */}
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">
                   আনওয়ারুল কুরআন একাডেমী
                 </h2>
-                <div className="h-px w-8 bg-indigo-200 dark:bg-indigo-900"></div>
+                {/* Removed lines */}
               </div>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-[4px] flex items-center justify-center gap-2">
                 <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
@@ -286,7 +286,7 @@ const App: React.FC = () => {
             </div>
             
             {/* Progress bar simulation */}
-            <div className="mt-10 w-56 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden border dark:border-gray-700 relative">
+            <div className="mt-10 w-56 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden relative">
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-indigo-700 rounded-full animate-loading-bar w-1/3"></div>
             </div>
           </div>
@@ -391,7 +391,7 @@ const App: React.FC = () => {
 
       {showLoginModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-indigo-950/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-[40px] p-10 shadow-2xl animate-scale-in border border-white/10">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-[40px] p-10 shadow-2xl animate-scale-in">
             <div className="text-center mb-8">
               <div className="w-20 h-20 bg-indigo-600 rounded-[24px] flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-500/30">
                 <i className="fas fa-user-shield text-3xl text-white"></i>
@@ -438,7 +438,7 @@ const App: React.FC = () => {
         </div>
       )}
       
-      <footer className="bg-white dark:bg-gray-950 border-t dark:border-white/5 py-12 no-print">
+      <footer className="bg-white dark:bg-gray-950 py-12 no-print">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-[10px] font-black text-gray-400 uppercase tracking-[2px]">
           <div className="mb-6 md:mb-0 flex items-center gap-4">
              <div className="w-8 h-8 bg-indigo-600/10 rounded-lg flex items-center justify-center">
@@ -448,12 +448,12 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex flex-col items-center md:items-end gap-4">
-            <div className="flex items-center gap-4 text-[9px] font-bold text-gray-500 bg-gray-50 dark:bg-gray-900/50 px-5 py-2.5 rounded-full border dark:border-white/5 shadow-inner">
+            <div className="flex items-center gap-4 text-[9px] font-bold text-gray-500 bg-gray-50 dark:bg-gray-900/50 px-5 py-2.5 rounded-full shadow-inner">
               <div className="flex items-center gap-2">
                 <i className="fas fa-calendar-day text-indigo-500"></i>
                 আজকের ভিজিটর: <span className="text-indigo-600 dark:text-indigo-400 text-xs">{dailyVisits}</span>
               </div>
-              <div className="w-px h-3 bg-gray-300 dark:bg-gray-700"></div>
+              {/* Removed line */}
               <div className="flex items-center gap-2">
                 <i className="fas fa-users text-indigo-500"></i>
                 সর্বমোট ভিজিটর: <span className="text-indigo-600 dark:text-indigo-400 text-xs">{totalVisits}</span>
