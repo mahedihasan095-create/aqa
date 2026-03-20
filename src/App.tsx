@@ -158,7 +158,6 @@ const App: React.FC = () => {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error('Auth session error:', error);
-          // If session is invalid, clear it
           if (error.message.includes('Refresh Token') || error.status === 400) {
             await supabase.auth.signOut();
             setUser(null);
@@ -168,6 +167,9 @@ const App: React.FC = () => {
         }
       } catch (err) {
         console.error('Unexpected auth error:', err);
+      } finally {
+        // Fetch data after auth session is determined
+        fetchAllData();
       }
     };
 
@@ -175,13 +177,22 @@ const App: React.FC = () => {
 
     // Listen for Auth Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+      const newUser = session?.user ?? null;
+      setUser(newUser);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        fetchAllData();
+      }
+      
       if (event === 'SIGNED_OUT') {
         setUser(null);
+        // Clear sensitive data on logout
+        setStudents([]);
+        setResults([]);
+        fetchAllData(); // Fetch public data
       }
     });
 
-    fetchAllData();
     trackVisit();
     const savedDarkMode = localStorage.getItem('school_dark_mode');
     if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode) === true);
@@ -334,6 +345,13 @@ const App: React.FC = () => {
               return false;
             }}
             onDeleteStudent={async (id) => {
+              // Check if student has published results
+              const hasPublishedResults = results.some(r => r.studentId === id && r.isPublished);
+              if (hasPublishedResults) {
+                alert('এই শিক্ষার্থীর পাবলিশকৃত রেজাল্ট রয়েছে, তাই তাকে ডিলিট করা যাবে না। আগে রেজাল্ট আনপাবলিশ বা ডিলিট করুন।');
+                return false;
+              }
+              
               const { error } = await supabase!.from('students').delete().eq('id', id);
               if (!error) { setStudents(prev => prev.filter(s => s.id !== id)); return true; }
               handleSupabaseError(error, 'Deleting Student');

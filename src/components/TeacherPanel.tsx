@@ -89,9 +89,15 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   };
 
   const handleDeleteGroup = async (key: string) => {
-    if (!confirm('আপনি কি এই গ্রুপের সকল রেজাল্ট মুছতে চান?')) return;
     const group = groupedResults.find(g => g.key === key);
     if (!group) return;
+    
+    if (group.isPublished) {
+      alert('পাবলিশকৃত রেজাল্ট সরাসরি ডিলিট করা যাবে না। আগে আনপাবলিশ করুন।');
+      return;
+    }
+
+    if (!confirm('আপনি কি এই গ্রুপের সকল রেজাল্ট মুছতে চান?')) return;
     setIsProcessing(true);
     // We need to delete one by one or have a bulk delete. 
     // Since onSaveResults is bulk, maybe we can use it if the backend supports it, 
