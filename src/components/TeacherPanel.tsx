@@ -401,21 +401,32 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     if (studentIds.length === 0) return;
     setIsProcessing(true);
     const classSubjects = subjects[entryConfig.class] || [];
+    
+    // Create a list of results to save, but only for students who actually have marks entered
     const resultsToSave: Result[] = studentIds.map(studentId => {
       const student = students.find(s => s.id === studentId);
-      const marksList = classSubjects.map(sub => ({ subjectName: sub, marks: parseInt(bulkMarks[studentId][sub] || '0') }));
+      const marksList = classSubjects.map(sub => ({ 
+        subjectName: sub, 
+        marks: parseInt(bulkMarks[studentId][sub] || '0') 
+      }));
       const total = marksList.reduce((acc, curr) => acc + curr.marks, 0);
-      const existingRes = results.find(r => r.id === `${studentId}-${entryConfig.exam}-${entryConfig.year}`);
+      
+      // Try to find existing result to preserve its ID and publication status
+      const existingRes = results.find(r => 
+        r.studentId === studentId && 
+        r.examName === entryConfig.exam && 
+        r.year === entryConfig.year
+      );
       
       return {
-        id: `${studentId}-${entryConfig.exam}-${entryConfig.year}`,
+        id: existingRes?.id || `${studentId}-${entryConfig.exam}-${entryConfig.year}`,
         studentId, 
-        studentName: student?.name || '',
-        studentRoll: student?.roll || '',
-        fatherName: student?.fatherName || '',
-        motherName: student?.motherName || '',
-        village: student?.village || '',
-        mobile: student?.mobile || '',
+        studentName: student?.name || existingRes?.studentName || '',
+        studentRoll: student?.roll || existingRes?.studentRoll || '',
+        fatherName: student?.fatherName || existingRes?.fatherName || '',
+        motherName: student?.motherName || existingRes?.motherName || '',
+        village: student?.village || existingRes?.village || '',
+        mobile: student?.mobile || existingRes?.mobile || '',
         examName: entryConfig.exam, 
         class: entryConfig.class, 
         year: entryConfig.year,
@@ -425,8 +436,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         isPublished: existingRes ? existingRes.isPublished : false
       };
     });
+
     const success = await onSaveResults(resultsToSave);
-    if (success) { alert('সংরক্ষিত হয়েছে!'); setActiveSubView('MANAGE_RESULTS'); }
+    if (success) { 
+      alert('সাফল্যের সাথে সংরক্ষিত হয়েছে!'); 
+      setActiveSubView('MANAGE_RESULTS'); 
+    }
     setIsProcessing(false);
   };
 
