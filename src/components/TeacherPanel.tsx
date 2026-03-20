@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
-import * as XLSX from 'https://esm.sh/xlsx';
+import * as XLSX from 'xlsx';
 
 interface TeacherPanelProps {
   students: Student[];
@@ -206,13 +206,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   const downloadResultsExcel = () => {
     const data = results.map(r => {
+      const student = students.find(s => s.id === r.studentId);
       const marksObj: Record<string, number> = {};
       r.marks.forEach(m => {
         marksObj[m.subjectName] = m.marks;
       });
       return {
-        'রোল': r.studentRoll,
-        'নাম': r.studentName,
+        'রোল': student?.roll || '',
+        'নাম': student?.name || '',
         'শ্রেণী': r.class,
         'পরীক্ষা': r.examName,
         'সাল': r.year,
@@ -369,17 +370,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(true);
     const classSubjects = subjects[entryConfig.class] || [];
     const resultsToSave: Result[] = studentIds.map(studentId => {
-      const student = students.find(s => s.id === studentId);
       const marksList = classSubjects.map(sub => ({ subjectName: sub, marks: parseInt(bulkMarks[studentId][sub] || '0') }));
       const total = marksList.reduce((acc, curr) => acc + curr.marks, 0);
       const existingRes = results.find(r => r.id === `${studentId}-${entryConfig.exam}-${entryConfig.year}`);
       
       return {
         id: `${studentId}-${entryConfig.exam}-${entryConfig.year}`,
-        studentId,
-        studentName: student?.name || '',
-        studentRoll: student?.roll || '',
-        examName: entryConfig.exam, class: entryConfig.class, year: entryConfig.year,
+        studentId, examName: entryConfig.exam, class: entryConfig.class, year: entryConfig.year,
         marks: marksList, totalMarks: total, grade: calculateGrade(total, classSubjects.length), 
         isPublished: existingRes ? existingRes.isPublished : false
       };
@@ -393,8 +390,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     return students.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.roll.includes(studentSearch);
       const matchesClass = studentFilterClass === 'সব' || s.studentClass === studentFilterClass;
-      const isNotInactive = s.status !== 'inactive';
-      return matchesSearch && matchesClass && isNotInactive;
+      return matchesSearch && matchesClass;
     }).sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
   }, [students, studentSearch, studentFilterClass]);
 
@@ -547,7 +543,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                            <td className="p-4 text-center">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
-                                 <button onClick={() => { if (confirm('আপনি কি এই শিক্ষার্থীকে ডিলিট করতে চান?')) onDeleteStudent(student.id); }} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
+                                 <button onClick={() => onDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
                               </div>
                            </td>
                         </tr>
