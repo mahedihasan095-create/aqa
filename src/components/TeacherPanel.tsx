@@ -51,6 +51,11 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
 
+  const [studentFilterClass, setStudentFilterClass] = useState('সব');
+
+  const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
+  const [bulkMarks, setBulkMarks] = useState<Record<string, Record<string, string>>>({});
+
   const groupedResults = useMemo(() => {
     const groups: Record<string, { class: string, year: string, examName: string, results: Result[], isPublished: boolean, totalStudents: number }> = {};
     results.forEach(res => {
@@ -78,6 +83,36 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     return Object.entries(groups).map(([key, value]) => ({ key, ...value }))
       .sort((a, b) => b.year.localeCompare(a.year) || a.class.localeCompare(b.class));
   }, [results, students]);
+
+  const entryList = useMemo(() => {
+    const classStudents = students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year);
+    const classResults = results.filter(r => 
+      r.class === entryConfig.class && 
+      r.year === entryConfig.year && 
+      r.examName === entryConfig.exam
+    );
+    
+    const list: { id: string, name: string, roll: string, isDeleted: boolean }[] = classStudents.map(s => ({
+      id: s.id,
+      name: s.name,
+      roll: s.roll,
+      isDeleted: false
+    }));
+    
+    classResults.forEach(r => {
+      const studentExists = list.some(item => item.id === r.studentId);
+      if (!studentExists) {
+        list.push({
+          id: r.id,
+          name: r.studentName,
+          roll: r.studentRoll,
+          isDeleted: true
+        });
+      }
+    });
+    
+    return list.sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
+  }, [students, results, entryConfig]);
 
   const handleTogglePublishGroup = async (key: string, currentStatus: boolean) => {
     const group = groupedResults.find(g => g.key === key);
@@ -109,11 +144,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
-  const [studentFilterClass, setStudentFilterClass] = useState('সব');
-
-  const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
-  const [bulkMarks, setBulkMarks] = useState<Record<string, Record<string, string>>>({});
-
   // Edit Student State
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
@@ -130,12 +160,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     );
 
     relevantResults.forEach(res => {
-      if (!res.studentId) return;
+      const key = res.studentId || res.id;
       const studentMarks: Record<string, string> = {};
       res.marks.forEach(m => {
         studentMarks[m.subjectName] = m.marks.toString();
       });
-      initialMarks[res.studentId] = studentMarks;
+      initialMarks[key] = studentMarks;
     });
 
     setBulkMarks(initialMarks);
@@ -271,7 +301,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         return;
     }
     setIsProcessing(true);
-    const newStudent: Student = { ...formData, id: Date.now().toString() };
+    const newStudent: Student = { ...formData, id: crypto.randomUUID() };
     const success = await onAddStudent(newStudent);
     if (success) {
       alert('শিক্ষার্থী সফলভাবে ভর্তি করা হয়েছে!');
@@ -307,7 +337,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         const data: any[] = XLSX.utils.sheet_to_json(ws);
         
         const importedStudents: Student[] = data.map((row, idx) => ({
-          id: (Date.now() + idx).toString(),
+          id: crypto.randomUUID(),
           name: (row['নাম'] || row['Name'] || '').toString(),
           roll: (row['রোল'] || row['Roll'] || '').toString(),
           fatherName: (row['পিতা'] || row['Father Name'] || '').toString(),
@@ -404,23 +434,24 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const classSubjects = subjects[entryConfig.class] || [];
     
     // Create a list of results to save, but only for students who actually have marks entered
-    const resultsToSave: Result[] = studentIds.map(studentId => {
-      const student = students.find(s => s.id === studentId);
-      const marksList = classSubjects.map(sub => ({ 
-        subjectName: sub, 
-        marks: parseInt(bulkMarks[studentId][sub] || '0') 
-      }));
-      const total = marksList.reduce((acc, curr) => acc + curr.marks, 0);
-      
-      // Try to find existing result to preserve its ID and publication status
+    const resultsToSave: Result[] = studentIds.map(key => {
+      const student = students.find(s => s.id === key);
       const existingRes = results.find(r => 
-        r.studentId === studentId && 
+        (r.studentId === key || r.id === key) && 
         r.examName === entryConfig.exam && 
         r.year === entryConfig.year
       );
       
+      const marksList = classSubjects.map(sub => ({ 
+        subjectName: sub, 
+        marks: parseInt(bulkMarks[key][sub] || '0') 
+      }));
+      const total = marksList.reduce((acc, curr) => acc + curr.marks, 0);
+      
+      const studentId = student ? student.id : (existingRes ? existingRes.studentId : null);
+      
       return {
-        id: existingRes?.id || `${studentId}-${entryConfig.exam}-${entryConfig.year}`,
+        id: existingRes?.id || `${key}-${entryConfig.exam}-${entryConfig.year}`,
         studentId, 
         studentName: student?.name || existingRes?.studentName || '',
         studentRoll: student?.roll || existingRes?.studentRoll || '',
@@ -748,16 +779,19 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                   </tr>
                 </thead>
                 <tbody className="">
-                  {students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year).sort((a,b) => parseInt(a.roll) - parseInt(b.roll)).map(student => {
-                    const currentMarks = bulkMarks[student.id] || {};
+                  {entryList.map(entry => {
+                    const currentMarks = bulkMarks[entry.id] || {};
                     const classSubjects = subjects[entryConfig.class] || [];
                     const total = classSubjects.reduce((acc, sub) => acc + parseInt(currentMarks[sub] || '0'), 0);
                     const grade = calculateGrade(total, classSubjects.length);
                     return (
-                      <tr key={student.id} className="text-gray-800 dark:text-gray-200">
+                      <tr key={entry.id} className="text-gray-800 dark:text-gray-200">
                         <td className="p-4">
-                           <div className="font-black text-indigo-600 text-xs">রোল: {student.roll}</div>
-                           <div className="text-sm font-bold">{student.name}</div>
+                           <div className="font-black text-indigo-600 text-xs">রোল: {entry.roll}</div>
+                           <div className="text-sm font-bold">
+                             {entry.name}
+                             {entry.isDeleted && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-1 rounded">ডিলেটেড</span>}
+                           </div>
                         </td>
                         {classSubjects.map(sub => (
                           <td key={sub} className="p-2 text-center">
@@ -766,7 +800,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                               className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 rounded-lg outline-none font-bold text-sm no-spinner" 
                               value={currentMarks[sub] || ''} 
                               placeholder="0" 
-                              onChange={e => setBulkMarks(prev => ({ ...prev, [student.id]: { ...(prev[student.id] || {}), [sub]: e.target.value } }))} 
+                              onChange={e => setBulkMarks(prev => ({ ...prev, [entry.id]: { ...(prev[entry.id] || {}), [sub]: e.target.value } }))} 
                             />
                           </td>
                         ))}
