@@ -250,6 +250,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleDeleteStudent = async (id: string) => {
+    if (!confirm('আপনি কি এই শিক্ষার্থীর তথ্য মুছতে চান?')) return;
+    setIsProcessing(true);
+    await onDeleteStudent(id);
+    setIsProcessing(false);
+  };
+
   const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.roll) {
@@ -360,7 +367,26 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const res = results.find(r => r.id === resultId);
     if (!res) return;
     setIsProcessing(true);
-    await onSaveResult({ ...res, isPublished: !res.isPublished });
+    
+    let updatedRes = { ...res, isPublished: !res.isPublished };
+    
+    // If snapshot is missing, populate it from current student data
+    if (!updatedRes.studentName) {
+      const student = students.find(s => s.id === res.studentId);
+      if (student) {
+        updatedRes = {
+          ...updatedRes,
+          studentName: student.name,
+          studentRoll: student.roll,
+          fatherName: student.fatherName,
+          motherName: student.motherName,
+          village: student.village,
+          mobile: student.mobile
+        };
+      }
+    }
+    
+    await onSaveResult(updatedRes);
     setIsProcessing(false);
   };
 
@@ -370,14 +396,26 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(true);
     const classSubjects = subjects[entryConfig.class] || [];
     const resultsToSave: Result[] = studentIds.map(studentId => {
+      const student = students.find(s => s.id === studentId);
       const marksList = classSubjects.map(sub => ({ subjectName: sub, marks: parseInt(bulkMarks[studentId][sub] || '0') }));
       const total = marksList.reduce((acc, curr) => acc + curr.marks, 0);
       const existingRes = results.find(r => r.id === `${studentId}-${entryConfig.exam}-${entryConfig.year}`);
       
       return {
         id: `${studentId}-${entryConfig.exam}-${entryConfig.year}`,
-        studentId, examName: entryConfig.exam, class: entryConfig.class, year: entryConfig.year,
-        marks: marksList, totalMarks: total, grade: calculateGrade(total, classSubjects.length), 
+        studentId, 
+        studentName: student?.name || '',
+        studentRoll: student?.roll || '',
+        fatherName: student?.fatherName || '',
+        motherName: student?.motherName || '',
+        village: student?.village || '',
+        mobile: student?.mobile || '',
+        examName: entryConfig.exam, 
+        class: entryConfig.class, 
+        year: entryConfig.year,
+        marks: marksList, 
+        totalMarks: total, 
+        grade: calculateGrade(total, classSubjects.length), 
         isPublished: existingRes ? existingRes.isPublished : false
       };
     });
@@ -543,7 +581,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                            <td className="p-4 text-center">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
-                                 <button onClick={() => onDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
+                                 <button onClick={() => handleDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
                               </div>
                            </td>
                         </tr>

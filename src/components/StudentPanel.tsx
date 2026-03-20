@@ -105,18 +105,31 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     const targetYear = searchType === 'BATCH' ? batchFilter.year : indivSearch.year;
     const targetExam = searchType === 'BATCH' ? batchFilter.exam : indivSearch.exam;
     
-    const classStudents = students.filter(s => s.studentClass === targetClass && s.year === targetYear);
-    const scores = classStudents.map(student => {
-      if (targetExam === 'বার্ষিক পরীক্ষা') {
-        const stats = calculateGrandAverage(student.id, targetClass, targetYear);
-        return { studentId: student.id, score: parseFloat(stats.average), hasResult: stats.hasAnnual };
-      } else {
-        const res = getSpecificResult(student.id, targetClass, targetYear, targetExam);
-        return { studentId: student.id, score: res?.totalMarks || 0, hasResult: !!res };
-      }
-    });
-    return scores.filter(s => s.hasResult).sort((a, b) => b.score - a.score);
-  }, [students, publishedResults, indivSearch, batchFilter, searchType]);
+    // Filter results for the target class, year, and exam
+    const relevantResults = publishedResults.filter(r => 
+      r.class === targetClass && 
+      r.year === targetYear && 
+      (targetExam === 'বার্ষিক পরীক্ষা' || r.examName.trim() === targetExam.trim())
+    );
+
+    // If it's annual view, we need to calculate grand average for each unique student in these results
+    if (targetExam === 'বার্ষিক পরীক্ষা') {
+      const uniqueStudentIds = Array.from(new Set(relevantResults.map(r => r.studentId)));
+      const scores = uniqueStudentIds.map(studentId => {
+        const stats = calculateGrandAverage(studentId, targetClass, targetYear);
+        return { studentId, score: parseFloat(stats.average), hasResult: stats.hasAnnual };
+      });
+      return scores.filter(s => s.hasResult).sort((a, b) => b.score - a.score);
+    } else {
+      // For single exam, just use the total marks from the results
+      const scores = relevantResults.map(res => ({
+        studentId: res.studentId,
+        score: res.totalMarks || 0,
+        hasResult: true
+      }));
+      return scores.sort((a, b) => b.score - a.score);
+    }
+  }, [publishedResults, indivSearch, batchFilter, searchType]);
 
   const getRank = (studentId: string) => {
     const index = classRanking.findIndex(item => item.studentId === studentId);
@@ -124,13 +137,41 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   };
 
   const handleSearch = () => {
-    const student = students.find(s => 
-      s.roll.toString() === indivSearch.roll.toString() && 
-      s.studentClass === indivSearch.class && 
-      s.year === indivSearch.year
+    // First find the result that matches the search criteria
+    const result = publishedResults.find(r => 
+      r.studentRoll.toString() === indivSearch.roll.toString() && 
+      r.class === indivSearch.class && 
+      r.year === indivSearch.year &&
+      r.examName.trim() === indivSearch.exam.trim()
     );
-    if (!student) { alert('শিক্ষার্থী পাওয়া যায়নি।'); return; }
-    setFoundStudent(student);
+
+    if (!result) { 
+      // Fallback: search in students list if result not found (maybe not published yet)
+      const student = students.find(s => 
+        s.roll.toString() === indivSearch.roll.toString() && 
+        s.studentClass === indivSearch.class && 
+        s.year === indivSearch.year
+      );
+      if (!student) {
+        alert('ফলাফল পাওয়া যায়নি।'); 
+        return; 
+      }
+      setFoundStudent(student);
+    } else {
+      // Create a dummy student object from the result snapshot for compatibility
+      const snapshotStudent: Student = {
+        id: result.studentId,
+        roll: result.studentRoll,
+        name: result.studentName,
+        fatherName: result.fatherName,
+        motherName: result.motherName,
+        village: result.village,
+        mobile: result.mobile,
+        studentClass: result.class,
+        year: result.year
+      };
+      setFoundStudent(snapshotStudent);
+    }
     setSearched(true);
   };
 
@@ -347,27 +388,22 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                     </tr>
                   </thead>
                   <tbody className="text-gray-800 dark:text-gray-200">
-                    {students.filter(s => s.studentClass === batchFilter.class && s.year === batchFilter.year).sort((a,b) => {
+                    {publishedResults.filter(r => r.class === batchFilter.class && r.year === batchFilter.year && r.examName.trim() === batchFilter.exam.trim()).sort((a,b) => {
                       if (batchSortBy === 'ROLL') {
-                        return parseInt(a.roll) - parseInt(b.roll);
+                        return parseInt(a.studentRoll) - parseInt(b.studentRoll);
                       }
                       
-                      const resA = getSpecificResult(a.id, batchFilter.class, batchFilter.year, batchFilter.exam);
-                      const resB = getSpecificResult(b.id, batchFilter.class, batchFilter.year, batchFilter.exam);
                       if (isAnnualView) {
-                        return parseFloat(calculateGrandAverage(b.id, batchFilter.class, batchFilter.year).average) - parseFloat(calculateGrandAverage(a.id, batchFilter.class, batchFilter.year).average);
+                        return parseFloat(calculateGrandAverage(b.studentId, batchFilter.class, batchFilter.year).average) - parseFloat(calculateGrandAverage(a.studentId, batchFilter.class, batchFilter.year).average);
                       }
-                      return (resB?.totalMarks || 0) - (resA?.totalMarks || 0);
-                    }).map(s => {
-                      const res = getSpecificResult(s.id, batchFilter.class, batchFilter.year, batchFilter.exam);
-                      if (!res) return null;
-                      
-                      const annualStats = isAnnualView ? calculateGrandAverage(s.id, batchFilter.class, batchFilter.year) : null;
+                      return (b.totalMarks || 0) - (a.totalMarks || 0);
+                    }).map(res => {
+                      const annualStats = isAnnualView ? calculateGrandAverage(res.studentId, batchFilter.class, batchFilter.year) : null;
                       
                       return (
-                        <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
-                          <td className="compact-td font-black text-indigo-700 dark:text-indigo-400">{s.roll}</td>
-                          <td className="compact-td font-bold text-left">{s.name}</td>
+                        <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
+                          <td className="compact-td font-black text-indigo-700 dark:text-indigo-400">{res.studentRoll}</td>
+                          <td className="compact-td font-bold text-left">{res.studentName}</td>
                           
                           {(classSubjectsMap[batchFilter.class] || []).map(sub => (
                             <td key={sub} className="compact-td font-bold">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
@@ -389,10 +425,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                               {res.grade}
                             </span>
                           </td>
-                          <td className="compact-td font-black text-amber-600">#{getRank(s.id)}</td>
+                          <td className="compact-td font-black text-amber-600">#{getRank(res.studentId)}</td>
                         </tr>
                       )
-                    }).filter(r => r !== null)}
+                    })}
                   </tbody>
                 </table>
               </div>
