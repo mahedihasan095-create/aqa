@@ -1,3 +1,4 @@
+// Anwarul Quran Academy Management System - Main Application Component
 import React, { useState, useEffect } from 'react';
 import { Student, Result, ViewType, Notice } from './types';
 import TeacherPanel from './components/TeacherPanel';
