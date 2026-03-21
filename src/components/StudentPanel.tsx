@@ -73,13 +73,18 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   }, [indivSearch.roll, indivSearch.class, indivSearch.year, indivSearch.exam, searchType]);
 
   const getSpecificResult = (studentId: string | null, className: string, year: string, examName: string) => {
-    return publishedResults.find(r => 
-      r.studentId === studentId && 
-      (studentId !== null || r.studentRoll === indivSearch.roll) &&
-      r.class === className && 
-      r.year === year && 
-      r.examName.trim() === examName.trim()
-    );
+    return publishedResults.find(r => {
+      const idMatch = r.studentId === studentId;
+      const rollMatch = r.studentRoll.toString() === indivSearch.roll.toString();
+      
+      // If studentId is available, match by it. Otherwise, match by roll.
+      const match = studentId ? idMatch : rollMatch;
+      
+      return match &&
+        r.class === className && 
+        r.year === year && 
+        r.examName.trim() === examName.trim();
+    });
   };
 
   const calculateGrandAverage = (studentId: string | null, className: string, year: string) => {
@@ -199,7 +204,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
           </div>
 
           {searched && foundStudent && (
-            getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
+            getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
               <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[40px] shadow-2xl max-w-4xl mx-auto print-area overflow-hidden">
                  <div className="text-center mb-4 pb-4 print:pb-2 print:mb-2 print-header">
                    <div className="flex flex-col items-center justify-center">
@@ -238,7 +243,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                        </tr>
                      </thead>
                      <tbody className="text-gray-800 dark:text-gray-200 text-[10px] md:text-xs">
-                       {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks.map(m => (
+                       {getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks.map(m => (
                          <tr key={m.subjectName}>
                            <td className="px-3 py-1.5 font-bold">{m.subjectName}</td>
                            <td className="px-3 py-1.5 text-center">১০০</td>
@@ -253,10 +258,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                        <tr>
                          <td colSpan={2} className="px-3 py-2 text-right uppercase tracking-wider">চলতি পরীক্ষার মোট নম্বর:</td>
                          <td className="px-3 py-2 text-center text-sm md:text-lg text-indigo-700 dark:text-indigo-300">
-                           {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks}
+                           {getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks}
                          </td>
                          <td className="px-3 py-2 text-center">
-                           {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade}
+                           {getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade}
                          </td>
                        </tr>
                      </tfoot>
