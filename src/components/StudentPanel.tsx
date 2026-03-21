@@ -214,16 +214,16 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  
                  <div className="grid grid-cols-2 mb-4 gap-3 text-[10px] md:text-xs text-gray-800 dark:text-gray-200">
                    <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
-                     <p><strong>নাম:</strong> {foundStudent.name}</p>
-                     <p><strong>পিতা:</strong> {foundStudent.fatherName}</p>
-                     <p><strong>মাতা:</strong> {foundStudent.motherName}</p>
-                     <p><strong>গ্রাম:</strong> {foundStudent.village}</p>
+                     <p><strong>নাম:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentName || foundStudent.name}</p>
+                     <p><strong>পিতা:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.fatherName || foundStudent.fatherName}</p>
+                     <p><strong>মাতা:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.motherName || foundStudent.motherName}</p>
+                     <p><strong>গ্রাম:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.village || foundStudent.village}</p>
                    </div>
                    <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
-                     <p><strong>রোল:</strong> {foundStudent.roll}</p>
+                     <p><strong>রোল:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentRoll || foundStudent.roll}</p>
                      <p><strong>শ্রেণী:</strong> {foundStudent.studentClass}</p>
                      <p><strong>শিক্ষাবর্ষ:</strong> {foundStudent.year}</p>
-                     <p><strong>মোবাইল:</strong> {foundStudent.mobile || '-'}</p>
+                     <p><strong>মোবাইল:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.mobile || foundStudent.mobile || '-'}</p>
                    </div>
                  </div>
                  
