@@ -40,7 +40,7 @@ input[type=number] {
 /* Enhanced A4 Printing Layout */
 @media print {
     @page {
-        margin: 5mm;
+        margin: 5mm 0.75in 5mm 0.75in;
     }
     
     .no-print { display: none !important; }
