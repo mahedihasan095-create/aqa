@@ -72,25 +72,19 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     setFoundStudent(null);
   }, [indivSearch.roll, indivSearch.class, indivSearch.year, indivSearch.exam, searchType]);
 
-  const getSpecificResult = (studentId: string | null, className: string, year: string, examName: string) => {
+  const getSpecificResult = (roll: string, className: string, year: string, examName: string) => {
     return publishedResults.find(r => {
-      const idMatch = r.studentId === studentId;
-      const rollMatch = r.studentRoll.toString() === indivSearch.roll.toString();
-      
-      // If studentId is available, match by it. Otherwise, match by roll.
-      const match = studentId ? idMatch : rollMatch;
-      
-      return match &&
+      return r.studentRoll.toString() === roll.toString() &&
         r.class === className && 
         r.year === year && 
         r.examName.trim() === examName.trim();
     });
   };
 
-  const calculateGrandAverage = (studentId: string | null, className: string, year: string) => {
-    const r1 = getSpecificResult(studentId, className, year, 'প্রথম সাময়িক');
-    const r2 = getSpecificResult(studentId, className, year, 'দ্বিতীয় সাময়িক');
-    const r3 = getSpecificResult(studentId, className, year, 'বার্ষিক পরীক্ষা');
+  const calculateGrandAverage = (roll: string, className: string, year: string) => {
+    const r1 = getSpecificResult(roll, className, year, 'প্রথম সাময়িক');
+    const r2 = getSpecificResult(roll, className, year, 'দ্বিতীয় সাময়িক');
+    const r3 = getSpecificResult(roll, className, year, 'বার্ষিক পরীক্ষা');
     
     const t1 = r1?.totalMarks || 0;
     const t2 = r2?.totalMarks || 0;
@@ -120,16 +114,16 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
 
     // If it's annual view, we need to calculate grand average for each unique student in these results
     if (targetExam === 'বার্ষিক পরীক্ষা') {
-      const uniqueStudentIds = Array.from(new Set(relevantResults.map(r => r.studentId)));
-      const scores = uniqueStudentIds.map(studentId => {
-        const stats = calculateGrandAverage(studentId, targetClass, targetYear);
-        return { studentId, score: parseFloat(stats.average), hasResult: stats.hasAnnual };
+      const uniqueRolls = Array.from(new Set(relevantResults.map(r => r.studentRoll)));
+      const scores = uniqueRolls.map(roll => {
+        const stats = calculateGrandAverage(roll, targetClass, targetYear);
+        return { roll, score: parseFloat(stats.average), hasResult: stats.hasAnnual };
       });
       return scores.filter(s => s.hasResult).sort((a, b) => b.score - a.score);
     } else {
       // For single exam, just use the total marks from the results
       const scores = relevantResults.map(res => ({
-        studentId: res.studentId,
+        roll: res.studentRoll,
         score: res.totalMarks || 0,
         hasResult: true
       }));
@@ -137,8 +131,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     }
   }, [publishedResults, indivSearch, batchFilter, searchType]);
 
-  const getRank = (studentId: string | null) => {
-    const index = classRanking.findIndex(item => item.studentId === studentId);
+  const getRank = (roll: string) => {
+    const index = classRanking.findIndex(item => item.roll === roll);
     return index !== -1 ? index + 1 : '-';
   };
 
@@ -204,7 +198,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
           </div>
 
           {searched && foundStudent && (
-            getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
+            getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam) ? (
               <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[40px] shadow-2xl max-w-4xl mx-auto print-area overflow-hidden">
                  <div className="text-center mb-4 pb-4 print:pb-2 print:mb-2 print-header">
                    <div className="flex flex-col items-center justify-center">
@@ -219,16 +213,16 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  
                  <div className="grid grid-cols-2 mb-4 gap-3 text-[10px] md:text-xs text-gray-800 dark:text-gray-200">
                    <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
-                     <p><strong>নাম:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentName || foundStudent.name}</p>
-                     <p><strong>পিতা:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.fatherName || foundStudent.fatherName}</p>
-                     <p><strong>মাতা:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.motherName || foundStudent.motherName}</p>
-                     <p><strong>গ্রাম:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.village || foundStudent.village}</p>
+                     <p><strong>নাম:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentName || foundStudent.name}</p>
+                     <p><strong>পিতা:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.fatherName || foundStudent.fatherName}</p>
+                     <p><strong>মাতা:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.motherName || foundStudent.motherName}</p>
+                     <p><strong>গ্রাম:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.village || foundStudent.village}</p>
                    </div>
                    <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
-                     <p><strong>রোল:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentRoll || foundStudent.roll}</p>
+                     <p><strong>রোল:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentRoll || foundStudent.roll}</p>
                      <p><strong>শ্রেণী:</strong> {foundStudent.studentClass}</p>
                      <p><strong>শিক্ষাবর্ষ:</strong> {foundStudent.year}</p>
-                     <p><strong>মোবাইল:</strong> {getSpecificResult(foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.mobile || foundStudent.mobile || '-'}</p>
+                     <p><strong>মোবাইল:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.mobile || foundStudent.mobile || '-'}</p>
                    </div>
                  </div>
                  
@@ -243,7 +237,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                        </tr>
                      </thead>
                      <tbody className="text-gray-800 dark:text-gray-200 text-[10px] md:text-xs">
-                       {getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks.map(m => (
+                       {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.marks.map(m => (
                          <tr key={m.subjectName}>
                            <td className="px-3 py-1.5 font-bold">{m.subjectName}</td>
                            <td className="px-3 py-1.5 text-center">১০০</td>
@@ -258,10 +252,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                        <tr>
                          <td colSpan={2} className="px-3 py-2 text-right uppercase tracking-wider">চলতি পরীক্ষার মোট নম্বর:</td>
                          <td className="px-3 py-2 text-center text-sm md:text-lg text-indigo-700 dark:text-indigo-300">
-                           {getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks}
+                           {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.totalMarks}
                          </td>
                          <td className="px-3 py-2 text-center">
-                           {getSpecificResult(foundStudent.id.startsWith('deleted-') ? null : foundStudent.id, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade}
+                           {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.grade}
                          </td>
                        </tr>
                      </tfoot>
@@ -275,10 +269,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                      </h3>
                      <div className="grid grid-cols-4 gap-2">
                        {[
-                         { label: '১ম সাময়িক', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).term1, color: 'indigo' },
-                         { label: '২য় সাময়িক', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).term2, color: 'blue' },
-                         { label: 'বার্ষিক', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).annual, color: 'purple' },
-                         { label: 'চূড়ান্ত গড়', value: calculateGrandAverage(foundStudent.id, indivSearch.class, indivSearch.year).average, color: 'green', isAvg: true }
+                         { label: '১ম সাময়িক', value: calculateGrandAverage(foundStudent.roll, indivSearch.class, indivSearch.year).term1, color: 'indigo' },
+                         { label: '২য় সাময়িক', value: calculateGrandAverage(foundStudent.roll, indivSearch.class, indivSearch.year).term2, color: 'blue' },
+                         { label: 'বার্ষিক', value: calculateGrandAverage(foundStudent.roll, indivSearch.class, indivSearch.year).annual, color: 'purple' },
+                         { label: 'চূড়ান্ত গড়', value: calculateGrandAverage(foundStudent.roll, indivSearch.class, indivSearch.year).average, color: 'green', isAvg: true }
                        ].map((item, idx) => (
                          <div key={idx} className={`p-2 bg-${item.color}-50 dark:bg-${item.color}-900/20 rounded-xl text-center shadow-sm`}>
                             <span className={`text-[8px] font-black text-${item.color}-600 dark:text-${item.color}-400 block uppercase`}>{item.label}</span>
@@ -292,7 +286,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  <div className="mt-6 grid grid-cols-2 gap-3">
                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-center">
                      <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 block mb-1 uppercase">শ্রেণীতে স্থান</span>
-                     <span className="font-black text-2xl text-amber-700 dark:text-amber-300">#{getRank(foundStudent.id)}</span>
+                     <span className="font-black text-2xl text-amber-700 dark:text-amber-300">#{getRank(foundStudent.roll)}</span>
                    </div>
                    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl text-center">
                      <span className="text-[9px] font-black text-green-600 dark:text-green-400 block mb-1 uppercase">ফলাফল</span>
@@ -400,11 +394,11 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                       }
                       
                       if (isAnnualView) {
-                        return parseFloat(calculateGrandAverage(b.studentId, batchFilter.class, batchFilter.year).average) - parseFloat(calculateGrandAverage(a.studentId, batchFilter.class, batchFilter.year).average);
+                        return parseFloat(calculateGrandAverage(b.studentRoll, batchFilter.class, batchFilter.year).average) - parseFloat(calculateGrandAverage(a.studentRoll, batchFilter.class, batchFilter.year).average);
                       }
                       return (b.totalMarks || 0) - (a.totalMarks || 0);
                     }).map(res => {
-                      const annualStats = isAnnualView ? calculateGrandAverage(res.studentId, batchFilter.class, batchFilter.year) : null;
+                      const annualStats = isAnnualView ? calculateGrandAverage(res.studentRoll, batchFilter.class, batchFilter.year) : null;
                       
                       return (
                         <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
@@ -431,7 +425,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                               {res.grade}
                             </span>
                           </td>
-                          <td className="compact-td font-black text-amber-600">#{getRank(res.studentId)}</td>
+                          <td className="compact-td font-black text-amber-600">#{getRank(res.studentRoll)}</td>
                         </tr>
                       )
                     })}

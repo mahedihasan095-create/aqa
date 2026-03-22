@@ -324,7 +324,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     if (success) {
       alert('শিক্ষার্থী সফলভাবে ভর্তি করা হয়েছে!');
       setFormData({ ...formData, name: '', roll: '', fatherName: '', motherName: '', mobile: '', village: '' });
-      setActiveSubView('STUDENT_LIST');
     }
     setIsProcessing(false);
   };
