@@ -19,6 +19,7 @@ interface TeacherPanelProps {
   onSaveResult: (r: Result) => Promise<boolean>;
   onSaveResults: (results: Result[]) => Promise<boolean>;
   onDeleteResult: (id: string) => Promise<boolean>;
+  onDeleteResults?: (ids: string[]) => Promise<boolean>;
   onUpdateNotices: (n: Notice[]) => Promise<boolean>;
   onUpdatePassword: (newPass: string) => void;
   onUpdatePrincipalSignature: (signatureBase64: string) => Promise<boolean>;
@@ -33,7 +34,7 @@ const EXAMS = ['প্রথম সাময়িক', 'দ্বিতীয�
 
 const TeacherPanel: React.FC<TeacherPanelProps> = ({ 
   students, results, subjects, notices, principalSignature, schoolLogo, slideshowImages = [], onSetSubjectsForClass, onAddStudent, onAddStudents,
-  onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, 
+  onUpdateStudent, onDeleteStudent, onSaveResult, onSaveResults, onDeleteResult, onDeleteResults,
   onUpdateNotices, onUpdatePassword, onUpdatePrincipalSignature, onUpdateSchoolLogo, onUpdateSlideshowImages, currentPassword 
 }) => {
   const [activeSubView, setActiveSubView] = useState<TeacherSubView>('STUDENT_LIST');
@@ -52,6 +53,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [studentSearch, setStudentSearch] = useState('');
 
   const [studentFilterClass, setStudentFilterClass] = useState('সব');
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
   const [bulkMarks, setBulkMarks] = useState<Record<string, Record<string, string>>>({});
@@ -134,13 +136,22 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
     if (!confirm('আপনি কি এই গ্রুপের সকল রেজাল্ট মুছতে চান?')) return;
     setIsProcessing(true);
-    // We need to delete one by one or have a bulk delete. 
-    // Since onSaveResults is bulk, maybe we can use it if the backend supports it, 
-    // but onDeleteResult is single. Let's use single for now or check if we can add bulk delete.
-    // For now, let's just do single deletes in a loop.
-    for (const res of group.results) {
-      await onDeleteResult(res.id);
+    
+    const ids = group.results.map(r => r.id);
+    if (onDeleteResults) {
+      await onDeleteResults(ids);
+    } else {
+      for (const id of ids) {
+        await onDeleteResult(id);
+      }
     }
+    setIsProcessing(false);
+  };
+
+  const handleDeleteIndividualResult = async (id: string) => {
+    if (!confirm('আপনি কি এই শিক্ষার্থীর রেজাল্ট মুছতে চান?')) return;
+    setIsProcessing(true);
+    await onDeleteResult(id);
     setIsProcessing(false);
   };
 
@@ -209,19 +220,26 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       return;
     }
     
-    // Create columns based on class subjects
-    const data = [
-      {
+    // Create data based on current entryList
+    const data = entryList.map(student => ({
+      'রোল': student.roll,
+      'নাম': student.name,
+      ...Object.fromEntries(classSubjects.map(sub => [sub, bulkMarks[student.id]?.[sub] || '0']))
+    }));
+
+    // If no students, add a sample row
+    if (data.length === 0) {
+      data.push({
         'রোল': '১০১',
         'নাম': 'নমুনা ছাত্র',
         ...Object.fromEntries(classSubjects.map(sub => [sub, '0']))
-      }
-    ];
+      });
+    }
     
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Marks");
-    XLSX.writeFile(wb, `Result_Entry_Sample_${entryConfig.class}.xlsx`);
+    XLSX.writeFile(wb, `Result_Entry_Sample_${entryConfig.class}_${entryConfig.exam}.xlsx`);
   };
 
   const downloadStudentsExcel = () => {
@@ -359,6 +377,44 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       }
     };
     reader.readAsBinaryString(file);
+  };
+
+  const handleResultExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data: any[] = XLSX.utils.sheet_to_json(ws);
+        
+        const newBulkMarks = { ...bulkMarks };
+        const classSubjects = subjects[entryConfig.class] || [];
+        
+        data.forEach(row => {
+          const roll = (row['রোল'] || row['Roll'] || '').toString();
+          const student = entryList.find(s => s.roll.toString() === roll);
+          if (student) {
+            const studentMarks: Record<string, string> = {};
+            classSubjects.forEach(sub => {
+              if (row[sub] !== undefined) {
+                studentMarks[sub] = row[sub].toString();
+              }
+            });
+            newBulkMarks[student.id] = { ...(newBulkMarks[student.id] || {}), ...studentMarks };
+          }
+        });
+        
+        setBulkMarks(newBulkMarks);
+        alert('রেজাল্ট সফলভাবে ইমপোর্ট করা হয়েছে! অনুগ্রহ করে সেভ বাটনে ক্লিক করুন।');
+      } catch (err) {
+        alert('ফাইলটি প্রসেস করতে সমস্যা হয়েছে।');
+      }
+    };
+    reader.readAsBinaryString(file);
+    if (resultExcelRef.current) resultExcelRef.current.value = '';
   };
 
   const handleAddNotice = async () => {
@@ -750,7 +806,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <button onClick={() => resultExcelRef.current?.click()} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-green-100 transition-colors">
                   <i className="fas fa-file-excel"></i> ইমপোর্ট
                 </button>
-                <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" />
+                <input type="file" ref={resultExcelRef} className="hidden" accept=".xlsx, .xls" onChange={handleResultExcelImport} />
               </div>
             </div>
             
@@ -851,26 +907,58 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <tbody className="">
                        {groupedResults.map(group => {
                           return (
-                            <tr key={group.key} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                               <td className="p-4 text-sm font-bold">{group.class} ({group.year})</td>
-                               <td className="p-4 text-sm font-bold text-indigo-600">{group.examName}</td>
-                               <td className="p-4 text-center font-black">
-                                  <span className="text-indigo-600">{group.results.length}</span> / {group.totalStudents}
-                               </td>
-                               <td className="p-4 text-center">
-                                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${group.isPublished ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
-                                     {group.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
-                                  </span>
-                               </td>
-                               <td className="p-4 text-center">
-                                  <div className="flex justify-center gap-2">
-                                     <button onClick={() => handleTogglePublishGroup(group.key, group.isPublished)} className={`p-2 rounded-lg transition-colors ${group.isPublished ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'}`} title={group.isPublished ? "সব আনপাবলিশ করুন" : "সব পাবলিশ করুন"}>
-                                        <i className={`fas ${group.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                                     </button>
-                                     <button onClick={() => handleDeleteGroup(group.key)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="সব মুছুন"><i className="fas fa-trash"></i></button>
-                                  </div>
-                               </td>
-                            </tr>
+                            <React.Fragment key={group.key}>
+                              <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                 <td className="p-4 text-sm font-bold">{group.class} ({group.year})</td>
+                                 <td className="p-4 text-sm font-bold text-indigo-600">{group.examName}</td>
+                                 <td className="p-4 text-center font-black">
+                                    <span className="text-indigo-600">{group.results.length}</span> / {group.totalStudents}
+                                 </td>
+                                 <td className="p-4 text-center">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${group.isPublished ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                       {group.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
+                                    </span>
+                                 </td>
+                                 <td className="p-4 text-center">
+                                    <div className="flex justify-center gap-2">
+                                       <button onClick={() => setExpandedGroup(expandedGroup === group.key ? null : group.key)} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg" title="বিস্তারিত দেখুন">
+                                          <i className={`fas ${expandedGroup === group.key ? 'fa-chevron-up' : 'fa-list'}`}></i>
+                                       </button>
+                                       <button onClick={() => handleTogglePublishGroup(group.key, group.isPublished)} className={`p-2 rounded-lg transition-colors ${group.isPublished ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'}`} title={group.isPublished ? "সব আনপাবলিশ করুন" : "সব পাবলিশ করুন"}>
+                                          <i className={`fas ${group.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                       </button>
+                                       <button onClick={() => handleDeleteGroup(group.key)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="সব মুছুন"><i className="fas fa-trash"></i></button>
+                                    </div>
+                                 </td>
+                              </tr>
+                              {expandedGroup === group.key && (
+                                <tr key={`${group.key}-expanded`}>
+                                  <td colSpan={5} className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl">
+                                    <div className="space-y-2">
+                                      <h4 className="text-xs font-black text-indigo-400 uppercase mb-2">শিক্ষার্থী ভিত্তিক তালিকা</h4>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        {group.results.sort((a, b) => Number(a.studentRoll || 0) - Number(b.studentRoll || 0)).map(res => (
+                                          <div key={res.id} className="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
+                                            <div>
+                                              <p className="text-xs font-black text-indigo-600">রোল: {res.studentRoll}</p>
+                                              <p className="text-sm font-bold">{res.studentName}</p>
+                                            </div>
+                                            <div className="flex gap-1">
+                                              <button onClick={() => handleTogglePublish(res.id)} className={`p-2 rounded-lg ${res.isPublished ? 'text-amber-500' : 'text-green-500'}`} title={res.isPublished ? 'আনপাবলিশ' : 'পাবলিশ'}>
+                                                <i className={`fas ${res.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                              </button>
+                                              <button onClick={() => handleDeleteIndividualResult(res.id)} className="p-2 text-red-500" title="মুছুন">
+                                                <i className="fas fa-trash"></i>
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           );
                        })}
                        {groupedResults.length === 0 && (

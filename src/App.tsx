@@ -368,6 +368,12 @@ const App: React.FC = () => {
               handleSupabaseError(error, 'Deleting Result');
               return false;
             }}
+            onDeleteResults={async (ids) => {
+              const { error } = await supabase!.from('results').delete().in('id', ids);
+              if (!error) { setResults(prev => prev.filter(r => !ids.includes(r.id))); return true; }
+              handleSupabaseError(error, 'Deleting Results Bulk');
+              return false;
+            }}
             onUpdateNotices={async (n) => {
               const { error: delError } = await supabase!.from('notices').delete().neq('id', '000');
               if (delError) { handleSupabaseError(delError, 'Notice Sync'); return false; }
