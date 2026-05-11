@@ -374,24 +374,24 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
               <div className="overflow-x-auto scrollbar-hide">
                 <table className="w-full text-left print-table">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300 font-black text-[9px] uppercase tracking-tighter">
-                    <tr>
-                      <th className="compact-th">রোল</th>
-                      <th className="compact-th text-left min-w-[90px]">নাম</th>
+                    <tr className="h-16">
+                      <th className="compact-th text-center w-12">রোল</th>
+                      <th className="compact-th text-left min-w-[120px]">নাম</th>
                       
-                      {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="compact-th">{s}</th>)}
+                      {(classSubjectsMap[batchFilter.class] || []).map(s => <th key={s} className="compact-th text-center min-w-[50px] whitespace-normal leading-tight">{s}</th>)}
                       
                       {isAnnualView ? (
                         <>
-                          <th className="compact-th font-black">১ম</th>
-                          <th className="compact-th font-black">২য়</th>
-                          <th className="compact-th font-black">বার্ষিক</th>
-                          <th className="compact-th font-black bg-gray-100 dark:bg-gray-700">গড়</th>
+                          <th className="compact-th font-black text-center min-w-[45px]">১ম</th>
+                          <th className="compact-th font-black text-center min-w-[45px]">২য়</th>
+                          <th className="compact-th font-black text-center min-w-[45px]">বার্ষিক</th>
+                          <th className="compact-th font-black bg-gray-100 dark:bg-gray-700 text-center min-w-[50px]">গড়</th>
                         </>
                       ) : (
-                        <th className="compact-th font-black">মোট</th>
+                        <th className="compact-th font-black text-center min-w-[50px]">মোট</th>
                       )}
-                      <th className="compact-th">গ্রেড</th>
-                      <th className="compact-th">স্থান</th>
+                      <th className="compact-th text-center min-w-[45px]">গ্রেড</th>
+                      <th className="compact-th text-center min-w-[45px]">স্থান</th>
                     </tr>
                   </thead>
                   <tbody className="text-gray-800 dark:text-gray-200">
@@ -409,30 +409,30 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                       
                       return (
                         <tr key={res.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors">
-                          <td className="compact-td font-black text-indigo-700 dark:text-indigo-400">{res.studentRoll}</td>
+                          <td className="compact-td font-black text-indigo-700 dark:text-indigo-400 text-center">{res.studentRoll}</td>
                           <td className="compact-td font-bold text-left">{res.studentName}</td>
                           
                           {(classSubjectsMap[batchFilter.class] || []).map(sub => (
-                            <td key={sub} className="compact-td font-bold">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
+                            <td key={sub} className="compact-td font-bold text-center">{res.marks.find(m => m.subjectName === sub)?.marks || '0'}</td>
                           ))}
-
+ 
                           {isAnnualView ? (
                             <>
-                              <td className="compact-td font-bold">{annualStats?.term1}</td>
-                              <td className="compact-td font-bold">{annualStats?.term2}</td>
-                              <td className="compact-td font-black">{annualStats?.annual}</td>
-                              <td className="compact-td font-black text-indigo-700 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10">{annualStats?.average}</td>
+                              <td className="compact-td font-bold text-center">{annualStats?.term1}</td>
+                              <td className="compact-td font-bold text-center">{annualStats?.term2}</td>
+                              <td className="compact-td font-black text-center">{annualStats?.annual}</td>
+                              <td className="compact-td font-black text-indigo-700 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-900/10 text-center">{annualStats?.average}</td>
                             </>
                           ) : (
-                            <td className="compact-td font-black text-indigo-700 dark:text-indigo-300">{res.totalMarks}</td>
+                            <td className="compact-td font-black text-indigo-700 dark:text-indigo-300 text-center">{res.totalMarks}</td>
                           )}
                           
-                          <td className="compact-td font-bold">
+                          <td className="compact-td font-bold text-center">
                             <span className={`px-1 rounded text-[9px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
                               {res.grade}
                             </span>
                           </td>
-                          <td className="compact-td font-black text-amber-600">#{getRank(res.studentRoll)}</td>
+                          <td className="compact-td font-black text-amber-600 text-center">#{getRank(res.studentRoll)}</td>
                         </tr>
                       )
                     })}
