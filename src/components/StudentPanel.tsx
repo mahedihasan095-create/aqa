@@ -58,6 +58,9 @@ const SchoolLogo = ({ size = "w-24 h-24", logo }: { size?: string, logo?: string
 );
 
 const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects: classSubjectsMap, principalSignature, logo }) => {
+  const bnToEn = (str: string) => str.toString().replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+  const enToBn = (str: string) => str.toString().replace(/[0-9]/g, d => "০১২৩৪৫৬৭৮৯"[parseInt(d)]);
+
   const [searchType, setSearchType] = useState<'BATCH' | 'INDIVIDUAL'>('INDIVIDUAL');
   const [batchFilter, setBatchFilter] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'বার্ষিক পরীক্ষা' });
   const [batchSortBy, setBatchSortBy] = useState<'RANK' | 'ROLL'>('RANK');
@@ -73,8 +76,9 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   }, [indivSearch.roll, indivSearch.class, indivSearch.year, indivSearch.exam, searchType]);
 
   const getSpecificResult = (roll: string, className: string, year: string, examName: string) => {
+    const searchRoll = bnToEn(roll);
     return publishedResults.find(r => {
-      return r.studentRoll.toString() === roll.toString() &&
+      return bnToEn(r.studentRoll) === searchRoll &&
         r.class === className && 
         r.year === year && 
         r.examName.trim() === examName.trim();
@@ -132,14 +136,17 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
   }, [publishedResults, indivSearch, batchFilter, searchType]);
 
   const getRank = (roll: string) => {
-    const index = classRanking.findIndex(item => item.roll === roll);
+    const searchRoll = bnToEn(roll);
+    const index = classRanking.findIndex(item => bnToEn(item.roll) === searchRoll);
     return index !== -1 ? index + 1 : '-';
   };
 
   const handleSearch = () => {
+    const searchRoll = bnToEn(indivSearch.roll);
+    
     // First find the result that matches the search criteria
     const result = publishedResults.find(r => 
-      r.studentRoll.toString() === indivSearch.roll.toString() && 
+      bnToEn(r.studentRoll) === searchRoll && 
       r.class === indivSearch.class && 
       r.year === indivSearch.year &&
       r.examName.trim() === indivSearch.exam.trim()
@@ -148,7 +155,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
     if (!result) { 
       // Fallback: search in students list if result not found (maybe not published yet)
       const student = students.find(s => 
-        s.roll.toString() === indivSearch.roll.toString() && 
+        bnToEn(s.roll) === searchRoll && 
         s.studentClass === indivSearch.class && 
         s.year === indivSearch.year
       );
@@ -390,7 +397,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                   <tbody className="text-gray-800 dark:text-gray-200">
                     {publishedResults.filter(r => r.class === batchFilter.class && r.year === batchFilter.year && r.examName.trim() === batchFilter.exam.trim()).sort((a,b) => {
                       if (batchSortBy === 'ROLL') {
-                        return parseInt(a.studentRoll) - parseInt(b.studentRoll);
+                        return parseInt(bnToEn(a.studentRoll)) - parseInt(bnToEn(b.studentRoll));
                       }
                       
                       if (isAnnualView) {
