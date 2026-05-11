@@ -54,6 +54,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
   const [studentFilterClass, setStudentFilterClass] = useState('সব');
   const [studentFilterYear, setStudentFilterYear] = useState('সব');
+  const [previewStudent, setPreviewStudent] = useState<Student | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
@@ -88,6 +89,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   }, [results, students]);
 
   const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+  const enToBn = (str: string) => str.replace(/[0-9]/g, d => "০১২৩৪৫৬৭৮৯"[parseInt(d)]);
 
   const entryList = useMemo(() => {
     const classStudents = students.filter(s => 
@@ -329,7 +331,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         return;
     }
     setIsProcessing(true);
-    const newStudent: Student = { ...formData, id: crypto.randomUUID() };
+    const newStudent: Student = { 
+      ...formData, 
+      id: crypto.randomUUID(),
+      roll: enToBn(formData.roll),
+      mobile: enToBn(formData.mobile)
+    };
     const success = await onAddStudent(newStudent);
     if (success) {
       alert('শিক্ষার্থী সফলভাবে ভর্তি করা হয়েছে!');
@@ -342,7 +349,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     e.preventDefault();
     if (!editingStudent) return;
     setIsProcessing(true);
-    const success = await onUpdateStudent(editingStudent);
+    const updatedStudent = {
+      ...editingStudent,
+      roll: enToBn(editingStudent.roll),
+      mobile: enToBn(editingStudent.mobile)
+    };
+    const success = await onUpdateStudent(updatedStudent);
     if (success) {
       alert('তথ্য সফলভাবে আপডেট করা হয়েছে!');
       setEditingStudent(null);
@@ -350,6 +362,11 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       alert('আপডেট করতে সমস্যা হয়েছে।');
     }
     setIsProcessing(false);
+  };
+
+  const normalizeClassName = (name: string) => {
+    // Remove variations of the word "Class" or "Grade" in Bengali and English
+    return name.replace(/(শ্রেণী|শ্রেণি|শ্রেনি|শ্রেনী|ক্লাস|Class|Grade)/g, '').trim();
   };
 
   const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,7 +381,9 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         const data: any[] = XLSX.utils.sheet_to_json(ws);
         
         const importedStudents: Student[] = data.map((row) => {
-          const rawClass = (row['শ্রেণী'] || row['Class'] || '').toString().trim();
+          let rawClass = (row['শ্রেণী'] || row['Class'] || '').toString().trim();
+          rawClass = normalizeClassName(rawClass);
+          
           const rawYear = (row['সাল'] || row['Year'] || '').toString().trim();
           
           let finalClass = rawClass;
@@ -392,13 +411,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
           return {
             id: crypto.randomUUID(),
             name: (row['নাম'] || row['Name'] || '').toString().trim(),
-            roll: (row['রোল'] || row['Roll'] || '').toString().trim(),
+            roll: enToBn((row['রোল'] || row['Roll'] || '').toString().trim()),
             fatherName: (row['পিতা'] || row['Father Name'] || '').toString().trim(),
             motherName: (row['মাতা'] || row['Mother Name'] || '').toString().trim(),
             mobile: (row['মোবাইল'] || row['Mobile'] || '').toString().trim(),
             village: (row['গ্রাম'] || row['Village'] || '').toString().trim(),
             studentClass: finalClass,
-            year: finalYear,
+            year: enToBn(finalYear),
           };
         });
 
@@ -572,8 +591,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.roll.includes(studentSearch);
-      const matchesClass = studentFilterClass === 'সব' || s.studentClass === studentFilterClass;
-      const matchesYear = studentFilterYear === 'সব' || s.year === studentFilterYear;
+      const matchesClass = studentFilterClass === 'সব' || s.studentClass.trim() === studentFilterClass.trim();
+      const matchesYear = studentFilterYear === 'সব' || s.year.trim() === studentFilterYear.trim();
       return matchesSearch && matchesClass && matchesYear;
     }).sort((a, b) => {
       const rollA = parseInt(bnToEn(a.roll)) || 0;
@@ -732,9 +751,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                    </thead>
                    <tbody className="">
                       {filteredStudents.map(student => (
-                        <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
                            <td className="p-4 font-black text-indigo-600 dark:text-indigo-400">{student.roll}</td>
-                           <td className="p-4 font-bold">{student.name}</td>
+                           <td className="p-4 font-bold cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => setPreviewStudent(student)}>
+                              {student.name}
+                              <i className="fas fa-eye ml-2 text-gray-300 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all text-xs"></i>
+                           </td>
                            <td className="p-4 font-medium">{student.studentClass} ({student.year})</td>
                            <td className="p-4 text-sm">{student.fatherName}</td>
                            <td className="p-4 text-sm">{student.motherName}</td>
@@ -1314,6 +1336,60 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
            </div>
         </div>
       )}
+       {/* Student Preview Modal */}
+       {previewStudent && (
+         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setPreviewStudent(null)}>
+            <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-[32px] shadow-2xl p-6 md:p-8 relative animate-scale-in" onClick={e => e.stopPropagation()}>
+               <button onClick={() => setPreviewStudent(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all">
+                  <i className="fas fa-times"></i>
+               </button>
+               
+               <div className="flex flex-col items-center text-center mb-6">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-black mb-4 shadow-lg ring-4 ring-indigo-50 dark:ring-indigo-900/30">
+                     {previewStudent.name.charAt(0)}
+                  </div>
+                  <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">{previewStudent.name}</h3>
+                  <div className="px-4 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-wider">
+                     রোল: {previewStudent.roll} | {previewStudent.studentClass} ({previewStudent.year})
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: 'পিতার নাম', value: previewStudent.fatherName, icon: 'fa-user-tie' },
+                    { label: 'মাতার নাম', value: previewStudent.motherName, icon: 'fa-user-nurse' },
+                    { label: 'মোবাইল', value: previewStudent.mobile, icon: 'fa-phone-alt', isMono: true },
+                    { label: 'গ্রাম/ঠিকানা', value: previewStudent.village, icon: 'fa-map-marker-alt' }
+                  ].map((info, i) => (
+                    <div key={i} className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
+                       <div className="flex items-center gap-3 mb-1">
+                          <i className={`fas ${info.icon} text-indigo-400 text-xs`}></i>
+                          <span className="text-[10px] font-black text-gray-400 uppercase">{info.label}</span>
+                       </div>
+                       <p className={`font-bold text-gray-700 dark:text-gray-300 ${info.isMono ? 'font-mono' : ''}`}>
+                          {info.value || 'প্রদান করা হয়নি'}
+                       </p>
+                    </div>
+                  ))}
+               </div>
+
+               <div className="mt-8 flex gap-3">
+                  <button 
+                    onClick={() => { setEditingStudent(previewStudent); setPreviewStudent(null); }}
+                    className="flex-1 py-3.5 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2"
+                  >
+                    <i className="fas fa-edit"></i> তথ্য এডিট করুন
+                  </button>
+                  <button 
+                    onClick={() => { handleDeleteStudent(previewStudent.id); setPreviewStudent(null); }}
+                    className="w-14 py-3.5 rounded-2xl bg-red-50 text-red-500 font-bold hover:bg-red-100 transition-all flex items-center justify-center"
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+               </div>
+            </div>
+         </div>
+       )}
     </div>
   );
 };
