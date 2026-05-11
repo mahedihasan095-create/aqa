@@ -1339,8 +1339,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
        {/* Student Preview Modal */}
        {previewStudent && (
          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setPreviewStudent(null)}>
-            <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-[32px] shadow-2xl p-6 md:p-8 relative animate-scale-in" onClick={e => e.stopPropagation()}>
-               <button onClick={() => setPreviewStudent(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all">
+            <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-[32px] shadow-2xl p-6 md:p-8 relative animate-scale-in max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+               <button onClick={() => setPreviewStudent(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all z-10">
                   <i className="fas fa-times"></i>
                </button>
                
@@ -1373,18 +1373,26 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                   ))}
                </div>
 
-               <div className="mt-8 flex gap-3">
+               <div className="mt-8 flex flex-col gap-3">
+                  <div className="flex gap-3">
+                     <button 
+                       onClick={() => { setEditingStudent(previewStudent); setPreviewStudent(null); }}
+                       className="flex-1 py-3.5 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2"
+                     >
+                       <i className="fas fa-edit"></i> তথ্য এডিট করুন
+                     </button>
+                     <button 
+                       onClick={() => { handleDeleteStudent(previewStudent.id); setPreviewStudent(null); }}
+                       className="w-14 py-3.5 rounded-2xl bg-red-50 text-red-500 font-bold hover:bg-red-100 transition-all flex items-center justify-center"
+                     >
+                       <i className="fas fa-trash"></i>
+                     </button>
+                  </div>
                   <button 
-                    onClick={() => { setEditingStudent(previewStudent); setPreviewStudent(null); }}
-                    className="flex-1 py-3.5 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2"
+                    onClick={() => setPreviewStudent(null)}
+                    className="w-full py-3.5 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
                   >
-                    <i className="fas fa-edit"></i> তথ্য এডিট করুন
-                  </button>
-                  <button 
-                    onClick={() => { handleDeleteStudent(previewStudent.id); setPreviewStudent(null); }}
-                    className="w-14 py-3.5 rounded-2xl bg-red-50 text-red-500 font-bold hover:bg-red-100 transition-all flex items-center justify-center"
-                  >
-                    <i className="fas fa-trash"></i>
+                    বন্ধ করুন
                   </button>
                </div>
             </div>
