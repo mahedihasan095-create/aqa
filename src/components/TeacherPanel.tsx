@@ -53,6 +53,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [studentSearch, setStudentSearch] = useState('');
 
   const [studentFilterClass, setStudentFilterClass] = useState('সব');
+  const [studentFilterYear, setStudentFilterYear] = useState('সব');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const [entryConfig, setEntryConfig] = useState({ class: 'প্রথম', year: '২০২৬', exam: 'প্রথম সাময়িক' });
@@ -86,11 +87,16 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       .sort((a, b) => b.year.localeCompare(a.year) || a.class.localeCompare(b.class));
   }, [results, students]);
 
+  const bnToEn = (str: string) => str.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+
   const entryList = useMemo(() => {
-    const classStudents = students.filter(s => s.studentClass === entryConfig.class && s.year === entryConfig.year);
+    const classStudents = students.filter(s => 
+      s.studentClass.trim() === entryConfig.class.trim() && 
+      s.year.trim() === entryConfig.year.trim()
+    );
     const classResults = results.filter(r => 
-      r.class === entryConfig.class && 
-      r.year === entryConfig.year && 
+      r.class.trim() === entryConfig.class.trim() && 
+      r.year.trim() === entryConfig.year.trim() && 
       r.examName === entryConfig.exam
     );
     
@@ -102,10 +108,10 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     }));
     
     classResults.forEach(r => {
-      const studentExists = list.some(item => item.id === r.studentId);
+      const studentExists = list.some(item => item.id === (r.studentId || r.id));
       if (!studentExists) {
         list.push({
-          id: r.id,
+          id: r.studentId || r.id,
           name: r.studentName,
           roll: r.studentRoll,
           isDeleted: true
@@ -113,7 +119,11 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
       }
     });
     
-    return list.sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
+    return list.sort((a, b) => {
+      const rollA = parseInt(bnToEn(a.roll)) || 0;
+      const rollB = parseInt(bnToEn(b.roll)) || 0;
+      return rollA - rollB;
+    });
   }, [students, results, entryConfig]);
 
   const handleTogglePublishGroup = async (key: string, currentStatus: boolean) => {
@@ -353,17 +363,44 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data: any[] = XLSX.utils.sheet_to_json(ws);
         
-        const importedStudents: Student[] = data.map((row, idx) => ({
-          id: crypto.randomUUID(),
-          name: (row['নাম'] || row['Name'] || '').toString(),
-          roll: (row['রোল'] || row['Roll'] || '').toString(),
-          fatherName: (row['পিতা'] || row['Father Name'] || '').toString(),
-          motherName: (row['মাতা'] || row['Mother Name'] || '').toString(),
-          mobile: (row['মোবাইল'] || row['Mobile'] || '').toString(),
-          village: (row['গ্রাম'] || row['Village'] || '').toString(),
-          studentClass: (row['শ্রেণী'] || row['Class'] || formData.studentClass).toString(),
-          year: (row['সাল'] || row['Year'] || formData.year).toString(),
-        }));
+        const importedStudents: Student[] = data.map((row) => {
+          const rawClass = (row['শ্রেণী'] || row['Class'] || '').toString().trim();
+          const rawYear = (row['সাল'] || row['Year'] || '').toString().trim();
+          
+          let finalClass = rawClass;
+          if (!finalClass) {
+            if (activeSubView === 'STUDENT_LIST' && studentFilterClass !== 'সব') {
+              finalClass = studentFilterClass;
+            } else if (activeSubView === 'RESULT_ENTRY') {
+              finalClass = entryConfig.class;
+            } else {
+              finalClass = formData.studentClass;
+            }
+          }
+
+          let finalYear = rawYear;
+          if (!finalYear) {
+            if (activeSubView === 'STUDENT_LIST' && studentFilterYear !== 'সব') {
+              finalYear = studentFilterYear;
+            } else if (activeSubView === 'RESULT_ENTRY') {
+              finalYear = entryConfig.year;
+            } else {
+              finalYear = formData.year;
+            }
+          }
+
+          return {
+            id: crypto.randomUUID(),
+            name: (row['নাম'] || row['Name'] || '').toString().trim(),
+            roll: (row['রোল'] || row['Roll'] || '').toString().trim(),
+            fatherName: (row['পিতা'] || row['Father Name'] || '').toString().trim(),
+            motherName: (row['মাতা'] || row['Mother Name'] || '').toString().trim(),
+            mobile: (row['মোবাইল'] || row['Mobile'] || '').toString().trim(),
+            village: (row['গ্রাম'] || row['Village'] || '').toString().trim(),
+            studentClass: finalClass,
+            year: finalYear,
+          };
+        });
 
         if (onAddStudents) {
           setIsProcessing(true);
@@ -536,9 +573,14 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     return students.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.roll.includes(studentSearch);
       const matchesClass = studentFilterClass === 'সব' || s.studentClass === studentFilterClass;
-      return matchesSearch && matchesClass;
-    }).sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
-  }, [students, studentSearch, studentFilterClass]);
+      const matchesYear = studentFilterYear === 'সব' || s.year === studentFilterYear;
+      return matchesSearch && matchesClass && matchesYear;
+    }).sort((a, b) => {
+      const rollA = parseInt(bnToEn(a.roll)) || 0;
+      const rollB = parseInt(bnToEn(b.roll)) || 0;
+      return rollA - rollB;
+    });
+  }, [students, studentSearch, studentFilterClass, studentFilterYear]);
 
   const handleSigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -644,6 +686,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শিক্ষার্থী তালিকা ({filteredStudents.length})</h2>
                 <div className="flex gap-2 w-full md:w-auto">
                    <button 
+                     onClick={() => fileInputRef.current?.click()}
+                     className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2 font-bold text-sm"
+                     title="এক্সেল ইম্পোর্ট"
+                   >
+                     <i className="fas fa-file-import"></i> <span className="hidden sm:inline">ইম্পোর্ট</span>
+                   </button>
+                   <button 
                      onClick={downloadStudentsExcel}
                      className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm"
                      title="এক্সেল ডাউনলোড করুন"
@@ -653,6 +702,10 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                    <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
                       <option value="সব">সব শ্রেণী</option>
                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                   </select>
+                   <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterYear} onChange={e => setStudentFilterYear(e.target.value)}>
+                      <option value="সব">সব সাল</option>
+                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                    </select>
                    <input 
                      type="text" 
