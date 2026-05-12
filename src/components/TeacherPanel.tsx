@@ -48,6 +48,8 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const [newPass, setNewPass] = useState('');
   const [subjectClass, setSubjectClass] = useState('প্রথম');
   const [subjectInput, setSubjectInput] = useState('');
+  const [editingSubjectIndex, setEditingSubjectIndex] = useState<number | null>(null);
+  const [editingSubjectText, setEditingSubjectText] = useState('');
   const [noticeInput, setNoticeInput] = useState('');
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
@@ -669,6 +671,29 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     setIsProcessing(false);
   };
 
+  const handleEditSubjectSave = async (index: number) => {
+    if (!editingSubjectText.trim()) return;
+    const currentSubjects = [...(subjects[subjectClass] || [])];
+    currentSubjects[index] = editingSubjectText.trim();
+    
+    setIsProcessing(true);
+    const success = await onSetSubjectsForClass(subjectClass, currentSubjects);
+    if (success) {
+      setEditingSubjectIndex(null);
+      setEditingSubjectText('');
+    }
+    setIsProcessing(false);
+  };
+
+  const handleDeleteSubject = async (index: number) => {
+    if (!confirm('আপনি কি এই বিষয়টি মুছতে চান?')) return;
+    const currentSubjects = (subjects[subjectClass] || []).filter((_, i) => i !== index);
+    
+    setIsProcessing(true);
+    await onSetSubjectsForClass(subjectClass, currentSubjects);
+    setIsProcessing(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Mobile-Friendly Sub-Navigation */}
@@ -1199,19 +1224,51 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             </p>
 
             {/* Display Current Subjects */}
-            <div className="mt-8 pt-8">
-              <h3 className="text-sm font-black mb-4 text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <i className="fas fa-list-ul"></i> {subjectClass} শ্রেণীর বর্তমান বিষয়সমূহ:
+            <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-700">
+              <h3 className="text-sm font-black mb-6 text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <i className="fas fa-list-ul text-indigo-400"></i> {subjectClass} শ্রেণীর বর্তমান বিষয়সমূহ:
               </h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {subjects[subjectClass] && subjects[subjectClass].length > 0 ? (
                   subjects[subjectClass].map((sub, i) => (
-                    <span key={i} className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-xl text-sm font-bold animate-fade-in">
-                      {sub}
-                    </span>
+                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-2xl group animate-fade-in hover:shadow-md transition-all">
+                      {editingSubjectIndex === i ? (
+                        <div className="flex w-full gap-2">
+                          <input 
+                            type="text" 
+                            className="flex-grow p-1.5 bg-white dark:bg-gray-800 rounded-lg border-none outline-none font-bold text-xs ring-1 ring-indigo-500"
+                            value={editingSubjectText}
+                            onChange={e => setEditingSubjectText(e.target.value)}
+                            autoFocus
+                          />
+                          <button onClick={() => handleEditSubjectSave(i)} className="text-green-500 p-1"><i className="fas fa-check"></i></button>
+                          <button onClick={() => setEditingSubjectIndex(null)} className="text-red-500 p-1"><i className="fas fa-times"></i></button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="font-bold text-gray-700 dark:text-gray-200">{sub}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => { setEditingSubjectIndex(i); setEditingSubjectText(sub); }} 
+                              className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
+                            >
+                              <i className="fas fa-edit text-[10px]"></i>
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteSubject(i)} 
+                              className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                            >
+                              <i className="fas fa-trash text-[10px]"></i>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-400 font-bold italic">কোনো বিষয় সেট করা নেই।</p>
+                  <div className="col-span-full p-8 text-center bg-gray-50 dark:bg-gray-700/30 rounded-3xl">
+                     <p className="text-sm text-gray-400 font-bold italic">কোনো বিষয় সেট করা নেই।</p>
+                  </div>
                 )}
               </div>
             </div>
