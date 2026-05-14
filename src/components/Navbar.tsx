@@ -55,7 +55,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, setView, darkMode, setDark
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-20">
           <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => setView('DASHBOARD')}>
-            <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300 p-0.5">
+            <div className="w-12 h-12 bg-white dark:bg-gray-200 rounded-xl shadow-lg flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-300 p-0.5">
               {logo ? (
                 <img src={logo} alt="Logo" className="w-full h-full object-contain" />
               ) : (

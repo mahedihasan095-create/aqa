@@ -424,7 +424,7 @@ const App: React.FC = () => {
                   type="email" 
                   autoFocus 
                   required
-                  className="w-full p-4 bg-gray-50 dark:bg-gray-700 border-none focus:ring-2 focus:ring-indigo-600 rounded-2xl outline-none font-bold text-sm transition-all shadow-inner" 
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-700 border-none focus:ring-2 focus:ring-indigo-600 rounded-2xl outline-none font-bold text-sm transition-all shadow-inner dark:text-white" 
                   placeholder="name@email.com" 
                   value={loginEmail} 
                   onChange={(e) => setLoginEmail(e.target.value)} 
@@ -435,7 +435,7 @@ const App: React.FC = () => {
                 <input 
                   type="password" 
                   required
-                  className="w-full p-4 bg-gray-50 dark:bg-gray-700 border-none focus:ring-2 focus:ring-indigo-600 rounded-2xl outline-none font-bold text-sm transition-all shadow-inner" 
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-700 border-none focus:ring-2 focus:ring-indigo-600 rounded-2xl outline-none font-bold text-sm transition-all shadow-inner dark:text-white" 
                   placeholder="••••••••" 
                   value={loginPassword} 
                   onChange={(e) => setLoginPassword(e.target.value)} 

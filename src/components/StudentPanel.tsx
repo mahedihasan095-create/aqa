@@ -196,10 +196,10 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-md max-w-2xl mx-auto no-print">
             <h3 className="text-xl font-black mb-6 text-indigo-900 dark:text-indigo-300 text-center">ফলাফল অনুসন্ধান</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">শ্রেণী</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.class} onChange={e => setIndivSearch({...indivSearch, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">সাল</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.year} onChange={e => setIndivSearch({...indivSearch, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">পরীক্ষা</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.exam} onChange={e => setIndivSearch({...indivSearch, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
-              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-400">রোল নম্বর</label><input type="text" className="w-full p-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl" value={indivSearch.roll} onChange={e => setIndivSearch({...indivSearch, roll: e.target.value})} /></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-200">শ্রেণী</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 dark:text-white font-bold rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm" value={indivSearch.class} onChange={e => setIndivSearch({...indivSearch, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-200">সাল</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 dark:text-white font-bold rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm" value={indivSearch.year} onChange={e => setIndivSearch({...indivSearch, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-200">পরীক্ষা</label><select className="w-full p-2.5 bg-white dark:bg-gray-700 dark:text-white font-bold rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm" value={indivSearch.exam} onChange={e => setIndivSearch({...indivSearch, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
+              <div><label className="text-xs font-bold block mb-1 text-gray-500 dark:text-gray-200">রোল নম্বর</label><input type="text" className="w-full p-2.5 bg-white dark:bg-gray-700 dark:text-white font-bold rounded-xl border-2 border-indigo-200 dark:border-indigo-900 focus:border-indigo-600 dark:focus:border-indigo-400 outline-none shadow-sm transition-all" value={indivSearch.roll} onChange={e => setIndivSearch({...indivSearch, roll: e.target.value})} /></div>
               <div className="md:col-span-4 mt-2"><button onClick={handleSearch} className="w-full bg-indigo-600 text-white px-6 py-3.5 rounded-2xl font-black shadow-lg">ফলাফল দেখুন</button></div>
             </div>
           </div>
@@ -210,8 +210,8 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  <div className="text-center mb-4 pb-4 print:pb-2 print:mb-2 print-header">
                    <div className="flex flex-col items-center justify-center">
                      <SchoolLogo size="w-16 h-16 md:w-20 md:h-20 mb-2" logo={logo} />
-                     <h1 className="text-2xl md:text-4xl font-black text-indigo-900 dark:text-indigo-300 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
-                     <p className="text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-400 mt-1">কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর</p>
+                     <h1 className="text-2xl md:text-4xl font-black text-indigo-900 dark:text-indigo-200 leading-tight">আনওয়ারুল কুরআন একাডেমী</h1>
+                     <p className="text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 mt-1">কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর</p>
                      <div className="inline-block mt-2 bg-indigo-600 text-white px-6 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest">
                        {indivSearch.exam} মূল্যায়নপত্র - {indivSearch.year}
                      </div>
@@ -219,13 +219,13 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                  </div>
                  
                  <div className="grid grid-cols-2 mb-4 gap-3 text-[10px] md:text-xs text-gray-800 dark:text-gray-200">
-                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
+                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700 p-3 rounded-xl border border-gray-100 dark:border-gray-600 shadow-sm">
                      <p><strong>নাম:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentName || foundStudent.name}</p>
                      <p><strong>পিতা:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.fatherName || foundStudent.fatherName}</p>
                      <p><strong>মাতা:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.motherName || foundStudent.motherName}</p>
                      <p><strong>গ্রাম:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.village || foundStudent.village}</p>
                    </div>
-                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
+                   <div className="space-y-1 bg-gray-50 dark:bg-gray-700 p-3 rounded-xl border border-gray-100 dark:border-gray-600 shadow-sm">
                      <p><strong>রোল:</strong> {getSpecificResult(foundStudent.roll, indivSearch.class, indivSearch.year, indivSearch.exam)?.studentRoll || foundStudent.roll}</p>
                      <p><strong>শ্রেণী:</strong> {foundStudent.studentClass}</p>
                      <p><strong>শিক্ষাবর্ষ:</strong> {foundStudent.year}</p>
@@ -271,7 +271,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
 
                  {isAnnualView && (
                    <div className="mt-4 pt-3">
-                     <h3 className="text-xs md:text-sm font-black text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
+                     <h3 className="text-xs md:text-sm font-black text-indigo-900 dark:text-indigo-200 mb-2 flex items-center gap-2">
                        <i className="fas fa-chart-line"></i> বার্ষিক সমন্বিত ফলাফল (৩ পরীক্ষা)
                      </h3>
                      <div className="grid grid-cols-4 gap-2">
@@ -347,13 +347,13 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">শ্রেণী</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" value={batchFilter.class} onChange={e => setBatchFilter({...batchFilter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">সাল</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" value={batchFilter.year} onChange={e => setBatchFilter({...batchFilter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-                <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">পরীক্ষা</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" value={batchFilter.exam} onChange={e => setBatchFilter({...batchFilter, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
+                <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">শ্রেণী</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 dark:text-white font-bold border border-gray-200 dark:border-gray-600 shadow-sm" value={batchFilter.class} onChange={e => setBatchFilter({...batchFilter, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">সাল</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 dark:text-white font-bold border border-gray-200 dark:border-gray-600 shadow-sm" value={batchFilter.year} onChange={e => setBatchFilter({...batchFilter, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+                <div><label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">পরীক্ষা</label><select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 dark:text-white font-bold border border-gray-200 dark:border-gray-600 shadow-sm" value={batchFilter.exam} onChange={e => setBatchFilter({...batchFilter, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select></div>
                 <div>
                   <label className="text-[10px] font-black block mb-1 text-gray-400 uppercase ml-1">সাজানোর ধরণ</label>
                   <select 
-                    className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-bold" 
+                    className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 dark:text-white font-bold border border-gray-200 dark:border-gray-600 shadow-sm" 
                     value={batchSortBy} 
                     onChange={e => setBatchSortBy(e.target.value as 'RANK' | 'ROLL')}
                   >
@@ -365,11 +365,11 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
             </div>
             
             <div className="p-2 md:p-3">
-              <div className="print-header hidden mb-4 text-center">
+                  <div className="print-header hidden mb-4 text-center">
                 <SchoolLogo size="w-16 h-16 mx-auto mb-2" logo={logo} />
-                <h1 className="text-xl font-black">আনওয়ারুল কুরআন একাডেমী</h1>
-                <h2 className="text-lg font-bold">{batchFilter.class} - {batchFilter.exam} ({batchFilter.year})</h2>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500">শ্রেণী ভিত্তিক মেধা তালিকা</h3>
+                <h1 className="text-xl font-black dark:text-white">আনওয়ারুল কুরআন একাডেমী</h1>
+                <h2 className="text-lg font-bold dark:text-gray-200">{batchFilter.class} - {batchFilter.exam} ({batchFilter.year})</h2>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 dark:text-gray-300">শ্রেণী ভিত্তিক মেধা তালিকা</h3>
               </div>
               <div className="overflow-x-auto scrollbar-hide">
                 <table className="w-full text-left print-table">
@@ -428,7 +428,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
                           )}
                           
                           <td className="compact-td font-bold text-center">
-                            <span className={`px-1 rounded text-[9px] font-black ${res.grade === 'F' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                          <span className={`px-1 rounded text-[9px] font-black ${res.grade === 'F' ? 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400' : 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400'}`}>
                               {res.grade}
                             </span>
                           </td>

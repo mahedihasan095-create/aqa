@@ -143,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
              </div>
              <button 
                onClick={() => setView('STUDENT_PORTAL')}
-               className="px-5 py-2.5 bg-white text-indigo-700 rounded-xl font-black shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-2 text-[11px]"
+               className="px-5 py-2.5 bg-white dark:bg-gray-700 text-indigo-700 dark:text-indigo-200 rounded-xl font-black shadow-lg hover:bg-indigo-50 dark:hover:bg-gray-600 transition-all flex items-center gap-2 text-[11px]"
              >
                ফলাফল দেখুন
                <i className="fas fa-arrow-right text-[10px]"></i>
@@ -166,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
           </div>
           <div>
             <h2 className="text-sm font-black text-gray-900 dark:text-gray-100 leading-none">শিক্ষক প্যানেল</h2>
-            <p className="text-[9px] text-gray-500 mt-1">ম্যানেজমেন্ট পোর্টাল</p>
+            <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-1">ম্যানেজমেন্ট পোর্টাল</p>
           </div>
         </div>
 
@@ -179,7 +179,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
           </div>
           <div>
             <h2 className="text-sm font-black text-gray-900 dark:text-gray-100 leading-none">ছাত্র প্যানেল</h2>
-            <p className="text-[9px] text-gray-500 mt-1">ফলাফল ও মার্কশিট</p>
+            <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-1">ফলাফল ও মার্কশিট</p>
           </div>
         </div>
       </div>
@@ -200,11 +200,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, studentCount, notices, s
               className="p-2.5 bg-gray-50 dark:bg-gray-700/30 rounded-xl hover:shadow-sm cursor-pointer transition-all active:scale-95 group flex flex-col justify-between"
             >
               <p className="text-[10px] font-bold text-gray-800 dark:text-gray-200 leading-tight line-clamp-2 mb-1">{notice.text}</p>
-              <span className="text-[8px] font-black text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full self-start">{notice.date}</span>
+              <span className="text-[8px] font-black text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full self-start">{notice.date}</span>
             </div>
           )) : (
             <div className="col-span-full text-center py-6 opacity-30">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">কোন নোটিশ নেই</p>
+              <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">কোন নোটিশ নেই</p>
             </div>
           )}
         </div>

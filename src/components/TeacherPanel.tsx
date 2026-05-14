@@ -731,30 +731,30 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <div className="flex gap-2 w-full md:w-auto">
                    <button 
                      onClick={() => fileInputRef.current?.click()}
-                     className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-2 font-bold text-sm"
+                     className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
                      title="এক্সেল ইম্পোর্ট"
                    >
                      <i className="fas fa-file-import"></i> <span className="hidden sm:inline">ইম্পোর্ট</span>
                    </button>
                    <button 
                      onClick={downloadStudentsExcel}
-                     className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors flex items-center gap-2 font-bold text-sm"
+                     className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
                      title="এক্সেল ডাউনলোড করুন"
                    >
                      <i className="fas fa-file-excel"></i> <span className="hidden sm:inline">ডাউনলোড</span>
                    </button>
-                   <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
+                   <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
                       <option value="সব">সব শ্রেণী</option>
                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                    </select>
-                   <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 font-bold text-sm" value={studentFilterYear} onChange={e => setStudentFilterYear(e.target.value)}>
+                   <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white font-bold text-sm" value={studentFilterYear} onChange={e => setStudentFilterYear(e.target.value)}>
                       <option value="সব">সব সাল</option>
                       {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                    </select>
                    <input 
                      type="text" 
                      placeholder="নাম বা রোল দিয়ে খুঁজুন..." 
-                     className="flex-grow md:w-64 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                     className="flex-grow md:w-64 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"
                      value={studentSearch}
                      onChange={e => setStudentSearch(e.target.value)}
                    />
@@ -763,7 +763,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
              <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                   <thead className="bg-indigo-50 dark:bg-indigo-900/20 text-[10px] font-black uppercase text-indigo-400">
+                   <thead className="bg-indigo-50 dark:bg-indigo-900/40 text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-300">
                       <tr>
                          <th className="p-4 rounded-tl-xl">রোল</th>
                          <th className="p-4">নাম</th>
@@ -783,9 +783,9 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                               <i className="fas fa-eye ml-2 text-gray-300 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all text-xs"></i>
                            </td>
                            <td className="p-4 font-medium">{student.studentClass} ({student.year})</td>
-                           <td className="p-4 text-sm">{student.fatherName}</td>
-                           <td className="p-4 text-sm">{student.motherName}</td>
-                           <td className="p-4 text-sm font-mono">{student.mobile}</td>
+                           <td className="p-4 text-sm dark:text-gray-200">{student.fatherName}</td>
+                           <td className="p-4 text-sm dark:text-gray-200">{student.motherName}</td>
+                           <td className="p-4 text-sm font-mono dark:text-gray-200">{student.mobile}</td>
                            <td className="p-4 text-center">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
@@ -827,7 +827,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                       <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">{field.label}</label>
                       <input 
                         type={field.type} 
-                        className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-xs focus:ring-1 focus:ring-indigo-600 transition-all shadow-sm"
+                        className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border-none outline-none font-bold text-xs focus:ring-1 focus:ring-indigo-600 transition-all shadow-sm"
                         placeholder={field.placeholder}
                         value={(formData as any)[field.key]}
                         onChange={e => setFormData({...formData, [field.key]: e.target.value})}
@@ -836,13 +836,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  ))}
                  <div className="space-y-1">
                     <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">শ্রেণী</label>
-                    <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-xs shadow-sm" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
+                    <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border-none outline-none font-bold text-xs shadow-sm" value={formData.studentClass} onChange={e => setFormData({...formData, studentClass: e.target.value})}>
                        {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                  </div>
                  <div className="space-y-1">
                     <label className="text-[9px] font-black text-indigo-500 uppercase ml-1">শিক্ষাবর্ষ</label>
-                    <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-xs shadow-sm" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
+                    <select className="w-full p-2.5 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border-none outline-none font-bold text-xs shadow-sm" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})}>
                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                  </div>
@@ -861,7 +861,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  </h3>
                  <p className="text-[10px] text-green-100 mb-4 relative z-10 font-medium">একসাথে একাধিক শিক্ষার্থী যোগ করতে এক্সেল ব্যবহার করুন।</p>
                  <div className="flex flex-col gap-2 relative z-10">
-                    <button onClick={() => fileInputRef.current?.click()} className="w-full py-2.5 bg-white text-green-700 rounded-xl font-black shadow-md hover:bg-green-50 transition-all active:scale-95 text-xs flex items-center justify-center gap-2">
+                    <button onClick={() => fileInputRef.current?.click()} className="w-full py-2.5 bg-white dark:bg-gray-700 text-green-700 dark:text-green-400 rounded-xl font-black shadow-md hover:bg-green-50 dark:hover:bg-gray-600 transition-all active:scale-95 text-xs flex items-center justify-center gap-2">
                       <i className="fas fa-upload"></i> ফাইল আপলোড
                     </button>
                     <button onClick={downloadSampleExcel} className="w-full py-2.5 bg-green-800/40 text-white rounded-xl font-black hover:bg-green-800/60 transition-all active:scale-95 text-[10px] flex items-center justify-center gap-2">
@@ -896,7 +896,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300 flex items-center gap-3">
                   <i className="fas fa-edit"></i> রেজাল্ট এন্ট্রি প্যানেল
                 </h2>
-                <p className="text-xs text-gray-500 mt-1 font-bold">শ্রেণী ও পরীক্ষা নির্বাচন করে নম্বর প্রদান করুন</p>
+                <p className="text-xs text-gray-500 dark:text-gray-300 mt-1 font-bold">শ্রেণী ও পরীক্ষা নির্বাচন করে নম্বর প্রদান করুন</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={downloadResultSampleExcel} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-blue-100 transition-colors">
@@ -912,15 +912,15 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl">
               <div className="space-y-1">
                  <label className="text-[10px] font-black text-indigo-400 uppercase ml-1">শ্রেণী</label>
-                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 font-bold" value={entryConfig.class} onChange={e => setEntryConfig({...entryConfig, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 dark:text-white font-bold" value={entryConfig.class} onChange={e => setEntryConfig({...entryConfig, class: e.target.value})}>{CLASSES.map(c => <option key={c} value={c}>{c}</option>)}</select>
               </div>
               <div className="space-y-1">
                  <label className="text-[10px] font-black text-indigo-400 uppercase ml-1">সাল</label>
-                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 font-bold" value={entryConfig.year} onChange={e => setEntryConfig({...entryConfig, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
+                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 dark:text-white font-bold" value={entryConfig.year} onChange={e => setEntryConfig({...entryConfig, year: e.target.value})}>{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
               </div>
               <div className="space-y-1">
                  <label className="text-[10px] font-black text-indigo-400 uppercase ml-1">পরীক্ষা</label>
-                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 font-bold" value={entryConfig.exam} onChange={e => setEntryConfig({...entryConfig, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select>
+                 <select className="w-full p-3 rounded-xl bg-white dark:bg-gray-700 dark:text-white font-bold" value={entryConfig.exam} onChange={e => setEntryConfig({...entryConfig, exam: e.target.value})}>{EXAMS.map(ex => <option key={ex} value={ex}>{ex}</option>)}</select>
               </div>
             </div>
             
@@ -952,7 +952,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                           <td key={sub} className="p-2 text-center">
                             <input 
                               type="number" 
-                              className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 rounded-lg outline-none font-bold text-sm no-spinner" 
+                              className="w-16 p-2 text-center bg-gray-50 dark:bg-gray-900 dark:text-white rounded-lg outline-none font-bold text-sm no-spinner" 
                               value={currentMarks[sub] || ''} 
                               placeholder="0" 
                               onChange={e => setBulkMarks(prev => ({ ...prev, [entry.id]: { ...(prev[entry.id] || {}), [sub]: e.target.value } }))} 
@@ -1014,19 +1014,19 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                                     <span className="text-indigo-600">{group.results.length}</span> / {group.totalStudents}
                                  </td>
                                  <td className="p-4 text-center">
-                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${group.isPublished ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${group.isPublished ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400'}`}>
                                        {group.isPublished ? 'পাবলিশড' : 'ড্রাফট'}
                                     </span>
                                  </td>
                                  <td className="p-4 text-center">
                                     <div className="flex justify-center gap-2">
-                                       <button onClick={() => setExpandedGroup(expandedGroup === group.key ? null : group.key)} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg" title="বিস্তারিত দেখুন">
+                                       <button onClick={() => setExpandedGroup(expandedGroup === group.key ? null : group.key)} className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg" title="বিস্তারিত দেখুন">
                                           <i className={`fas ${expandedGroup === group.key ? 'fa-chevron-up' : 'fa-list'}`}></i>
                                        </button>
-                                       <button onClick={() => handleTogglePublishGroup(group.key, group.isPublished)} className={`p-2 rounded-lg transition-colors ${group.isPublished ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'}`} title={group.isPublished ? "সব আনপাবলিশ করুন" : "সব পাবলিশ করুন"}>
+                                       <button onClick={() => handleTogglePublishGroup(group.key, group.isPublished)} className={`p-2 rounded-lg transition-colors ${group.isPublished ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30' : 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30'}`} title={group.isPublished ? "সব আনপাবলিশ করুন" : "সব পাবলিশ করুন"}>
                                           <i className={`fas ${group.isPublished ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                        </button>
-                                       <button onClick={() => handleDeleteGroup(group.key)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="সব মুছুন"><i className="fas fa-trash"></i></button>
+                                       <button onClick={() => handleDeleteGroup(group.key)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg" title="সব মুছুন"><i className="fas fa-trash"></i></button>
                                     </div>
                                  </td>
                               </tr>
@@ -1077,7 +1077,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
               {notices.map(notice => (
                 <div key={notice.id} className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl flex justify-between items-start group">
                    <div>
-                      <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mb-2 inline-block">{notice.date}</span>
+                      <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full mb-2 inline-block">{notice.date}</span>
                       <p className="font-bold text-gray-800 dark:text-gray-200">{notice.text}</p>
                    </div>
                    <div className="flex gap-1">
@@ -1100,7 +1100,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  )}
               </div>
               <textarea 
-                className="w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-indigo-600 h-40 resize-none mb-4"
+                className="w-full p-4 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-2xl border-none outline-none font-bold text-sm focus:ring-2 focus:ring-indigo-600 h-40 resize-none mb-4"
                 placeholder="এখানে নোটিশটি লিখুন..."
                 value={noticeInput}
                 onChange={e => setNoticeInput(e.target.value)}
@@ -1141,7 +1141,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                     <div className="flex gap-2">
                       <input 
                         type="text" 
-                        className="flex-grow p-2.5 bg-white dark:bg-gray-800 rounded-xl border-none outline-none font-bold text-xs focus:ring-1 focus:ring-indigo-600 transition-all shadow-sm"
+                        className="flex-grow p-2.5 bg-white dark:bg-gray-800 dark:text-white rounded-xl border-none outline-none font-bold text-xs focus:ring-1 focus:ring-indigo-600 transition-all shadow-sm"
                         placeholder="এখানে শিরোনাম লিখুন..."
                         defaultValue={slide.title}
                         onBlur={(e) => handleUpdateSlideTitle(idx, e.target.value)}
@@ -1192,7 +1192,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শ্রেণী নির্বাচন করুন</label>
                 <select 
-                  className="w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
+                  className="w-full p-4 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
                   value={subjectClass}
                   onChange={e => setSubjectClass(e.target.value)}
                 >
@@ -1204,7 +1204,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 <div className="flex gap-3">
                   <input 
                     type="text" 
-                    className="flex-grow p-4 bg-gray-50 dark:bg-gray-700 rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
+                    className="flex-grow p-4 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-2xl border-none outline-none font-bold text-sm shadow-inner"
                     placeholder="উদা: বাংলা, ইংরেজি, গণিত"
                     value={subjectInput}
                     onChange={e => setSubjectInput(e.target.value)}
@@ -1225,7 +1225,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
             {/* Display Current Subjects */}
             <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-700">
-              <h3 className="text-sm font-black mb-6 text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-black mb-6 text-gray-500 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
                 <i className="fas fa-list-ul text-indigo-400"></i> {subjectClass} শ্রেণীর বর্তমান বিষয়সমূহ:
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1236,7 +1236,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                         <div className="flex w-full gap-2">
                           <input 
                             type="text" 
-                            className="flex-grow p-1.5 bg-white dark:bg-gray-800 rounded-lg border-none outline-none font-bold text-xs ring-1 ring-indigo-500"
+                            className="flex-grow p-1.5 bg-white dark:bg-gray-800 dark:text-white rounded-lg border-none outline-none font-bold text-xs ring-1 ring-indigo-500"
                             value={editingSubjectText}
                             onChange={e => setEditingSubjectText(e.target.value)}
                             autoFocus
@@ -1250,13 +1250,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
                               onClick={() => { setEditingSubjectIndex(i); setEditingSubjectText(sub); }} 
-                              className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
+                              className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
                             >
                               <i className="fas fa-edit text-[10px]"></i>
                             </button>
                             <button 
                               onClick={() => handleDeleteSubject(i)} 
-                              className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                              className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
                             >
                               <i className="fas fa-trash text-[10px]"></i>
                             </button>
@@ -1316,7 +1316,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                   <i className="fas fa-lock text-red-500"></i> নিরাপত্তা পাসওয়ার্ড
                </h2>
                <div className="space-y-4">
-                 <input type="password" placeholder="নতুন পাসওয়ার্ড দিন" className="w-full p-4 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-2xl outline-none text-sm transition-all shadow-inner font-bold" value={newPass} onChange={e => setNewPass(e.target.value)} />
+                 <input type="password" placeholder="নতুন পাসওয়ার্ড দিন" className="w-full p-4 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-2xl outline-none text-sm transition-all shadow-inner font-bold" value={newPass} onChange={e => setNewPass(e.target.value)} />
                  <button onClick={() => onUpdatePassword(newPass)} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all active:scale-95">পাসওয়ার্ড আপডেট করুন</button>
                </div>
              </div>
@@ -1356,7 +1356,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                    <div key={field.key} className="space-y-1">
                       <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">{field.label}</label>
                       <input 
-                        type="text" className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-sm"
+                        type="text" className="w-full p-3 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border-none outline-none font-bold text-sm"
                         value={(editingStudent as any)[field.key]}
                         onChange={e => setEditingStudent({...editingStudent, [field.key]: e.target.value})}
                       />
@@ -1366,7 +1366,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  <div className="space-y-1">
                     <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শ্রেণী</label>
                     <select 
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-sm" 
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border-none outline-none font-bold text-sm" 
                       value={editingStudent.studentClass} 
                       onChange={e => setEditingStudent({...editingStudent, studentClass: e.target.value})}
                     >
@@ -1377,7 +1377,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  <div className="space-y-1">
                     <label className="text-[10px] font-black text-indigo-500 uppercase ml-2">শিক্ষাবর্ষ</label>
                     <select 
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border-none outline-none font-bold text-sm" 
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-700 dark:text-white rounded-xl border-none outline-none font-bold text-sm" 
                       value={editingStudent.year} 
                       onChange={e => setEditingStudent({...editingStudent, year: e.target.value})}
                     >
@@ -1386,7 +1386,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                  </div>
 
                  <div className="md:col-span-2 flex gap-3 mt-4">
-                    <button type="button" onClick={() => setEditingStudent(null)} className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-2xl font-black">বাতিল</button>
+                    <button type="button" onClick={() => setEditingStudent(null)} className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl font-black">বাতিল</button>
                     <button type="submit" disabled={isProcessing} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">আপডেট করুন</button>
                  </div>
               </form>
