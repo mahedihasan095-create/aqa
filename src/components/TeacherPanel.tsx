@@ -2,6 +2,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
 import * as XLSX from 'xlsx';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface TeacherPanelProps {
   students: Student[];
@@ -44,6 +46,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
   const sigInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const slideshowInputRef = useRef<HTMLInputElement>(null);
+  const studentListRef = useRef<HTMLDivElement>(null);
   
   const [newPass, setNewPass] = useState('');
   const [subjectClass, setSubjectClass] = useState('প্রথম');
@@ -271,6 +274,23 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
     XLSX.writeFile(wb, `Students_List_${studentFilterClass}.xlsx`);
+  };
+
+  const downloadStudentsPDF = () => {
+    if (!studentListRef.current) return;
+    
+    const element = studentListRef.current;
+    const opt = {
+      margin: 10,
+      filename: `Students_List_${studentFilterClass}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'landscape' as const }
+    };
+
+    // Before generating, we might want to temporarily show some things or hide others
+    // html2pdf can take a cloned element if needed
+    html2pdf().set(opt).from(element).save();
   };
 
   const downloadResultsExcel = () => {
@@ -743,6 +763,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                    >
                      <i className="fas fa-file-excel"></i> <span className="hidden sm:inline">ডাউনলোড</span>
                    </button>
+                   <button 
+                     onClick={downloadStudentsPDF}
+                     className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
+                     title="পিডিএফ ডাউনলোড করুন"
+                   >
+                     <i className="fas fa-file-pdf"></i> <span className="hidden sm:inline">পিডিএফ</span>
+                   </button>
                    <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
                       <option value="সব">সব শ্রেণী</option>
                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -761,7 +788,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                 </div>
              </div>
 
-             <div className="overflow-x-auto">
+             <div className="overflow-x-auto" ref={studentListRef}>
+                {/* Print/PDF Header (Hidden in UI, visible in PDF/Print) */}
+                <div className="hidden print:block mb-6 text-center border-b-2 border-indigo-900 pb-4">
+                   <h1 className="text-3xl font-black text-indigo-900">আনওয়ারুল কুরআন একাডেমী</h1>
+                   <p className="text-sm font-bold text-gray-600">কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর</p>
+                   <h2 className="text-xl font-bold mt-2 text-indigo-700">শিক্ষার্থী তালিকা - {studentFilterClass === 'সব' ? 'সকল শ্রেণী' : studentFilterClass} ({studentFilterYear === 'সব' ? 'সকল বছর' : studentFilterYear})</h2>
+                </div>
                 <table className="w-full text-left">
                    <thead className="bg-indigo-50 dark:bg-indigo-900/40 text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-300">
                       <tr>
