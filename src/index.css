@@ -76,11 +76,27 @@
 }
 
 @media print {
+  @page {
+    size: portrait;
+    margin: 1cm;
+  }
+
+  @page landscape-page {
+    size: landscape;
+    margin: 1cm;
+  }
+
+  .print-landscape {
+    page: landscape-page;
+  }
+
   body {
     background: white !important;
     padding: 0 !important;
     margin: 0 !important;
     font-family: 'Hind Siliguri', sans-serif !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .no-print {
@@ -91,6 +107,14 @@
     display: block !important;
   }
   
+  .print-area { 
+    width: 100% !important; 
+    margin: 0 !important; 
+    padding: 0 !important; 
+    box-shadow: none !important; 
+    border: none !important; 
+  }
+
   .print-header {
     display: block !important;
     text-align: center;
@@ -109,22 +133,20 @@
     padding: 8px !important;
     font-size: 10pt !important;
     color: black !important;
+    text-align: center !important;
   }
   
   .print-table th {
     background-color: #f3f4f6 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
   
   .dark {
     color-scheme: light !important;
   }
 
-  @page {
-    size: portrait;
-    margin: 1cm;
-  }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; }
 }
 
 :root {
@@ -162,32 +184,7 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
-/* Enhanced A4 Printing Layout */
-@media print {
-    @page {
-        margin: 5mm 0.75in 5mm 0.75in;
-    }
-    
-    .no-print { display: none !important; }
-    body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .print-area { width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
-    
-    .print-table { 
-        width: 100% !important; 
-        border-collapse: collapse !important; 
-        font-size: 11px !important; 
-    }
-    .print-table th, .print-table td { 
-        padding: 4px 2px !important; 
-        color: black !important; 
-        text-align: center !important;
-    }
-    .print-header { display: block !important; text-align: center; margin-bottom: 5px; padding-bottom: 5px; }
-    
-    table { page-break-inside: auto; }
-    tr { page-break-inside: avoid; page-break-after: auto; }
-    thead { display: table-header-group; }
-}
+
 
 .animate-float {
     animation: float 3s ease-in-out infinite;

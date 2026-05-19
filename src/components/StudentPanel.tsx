@@ -338,7 +338,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({ students, results, subjects
 
       {searchType === 'BATCH' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-[40px] shadow-xl overflow-hidden print-area">
+          <div className="bg-white dark:bg-gray-800 rounded-[40px] shadow-xl overflow-hidden print-area print-landscape">
             <div className="p-8 bg-indigo-50 dark:bg-indigo-900/30 no-print">
               <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শ্রেণী ভিত্তিক মেধা তালিকা</h2>
