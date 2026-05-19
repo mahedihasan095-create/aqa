@@ -2,8 +2,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student, Result, TeacherSubView, SubjectMarks, Notice } from '../types';
 import * as XLSX from 'xlsx';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
 
 interface TeacherPanelProps {
   students: Student[];
@@ -274,23 +272,6 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
     XLSX.writeFile(wb, `Students_List_${studentFilterClass}.xlsx`);
-  };
-
-  const downloadStudentsPDF = () => {
-    if (!studentListRef.current) return;
-    
-    const element = studentListRef.current;
-    const opt = {
-      margin: 10,
-      filename: `Students_List_${studentFilterClass}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'landscape' as const }
-    };
-
-    // Before generating, we might want to temporarily show some things or hide others
-    // html2pdf can take a cloned element if needed
-    html2pdf().set(opt).from(element).save();
   };
 
   const downloadResultsExcel = () => {
@@ -749,27 +730,20 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
              <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-2xl font-black text-indigo-900 dark:text-indigo-300">শিক্ষার্থী তালিকা ({filteredStudents.length})</h2>
                 <div className="flex gap-2 w-full md:w-auto">
-                   <button 
-                     onClick={() => fileInputRef.current?.click()}
-                     className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
-                     title="এক্সেল ইম্পোর্ট"
-                   >
-                     <i className="fas fa-file-import"></i> <span className="hidden sm:inline">ইম্পোর্ট</span>
-                   </button>
-                   <button 
-                     onClick={downloadStudentsExcel}
-                     className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
-                     title="এক্সেল ডাউনলোড করুন"
-                   >
-                     <i className="fas fa-file-excel"></i> <span className="hidden sm:inline">ডাউনলোড</span>
-                   </button>
-                   <button 
-                     onClick={downloadStudentsPDF}
-                     className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
-                     title="পিডিএফ ডাউনলোড করুন"
-                   >
-                     <i className="fas fa-file-pdf"></i> <span className="hidden sm:inline">পিডিএফ</span>
-                   </button>
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
+                      title="এক্সেল ইম্পোর্ট"
+                    >
+                      <i className="fas fa-file-import"></i> <span className="hidden sm:inline">ইম্পোর্ট</span>
+                    </button>
+                    <button 
+                      onClick={downloadStudentsExcel}
+                      className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors flex items-center gap-2 font-bold text-sm"
+                      title="এক্সেল ডাউনলোড করুন"
+                    >
+                      <i className="fas fa-file-excel"></i> <span className="hidden sm:inline">এক্সেল</span>
+                    </button>
                    <select className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white font-bold text-sm" value={studentFilterClass} onChange={e => setStudentFilterClass(e.target.value)}>
                       <option value="সব">সব শ্রেণী</option>
                       {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -790,12 +764,12 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
 
              <div className="overflow-x-auto" ref={studentListRef}>
                 {/* Print/PDF Header (Hidden in UI, visible in PDF/Print) */}
-                <div className="hidden print:block mb-6 text-center border-b-2 border-indigo-900 pb-4">
+                <div className="hidden print:block mb-6 text-center border-b-2 border-indigo-900 pb-4 print-header">
                    <h1 className="text-3xl font-black text-indigo-900">আনওয়ারুল কুরআন একাডেমী</h1>
                    <p className="text-sm font-bold text-gray-600">কলাবাড়ী মাহিগঞ্জ, ২৯নং ওয়ার্ড, রংপুর</p>
                    <h2 className="text-xl font-bold mt-2 text-indigo-700">শিক্ষার্থী তালিকা - {studentFilterClass === 'সব' ? 'সকল শ্রেণী' : studentFilterClass} ({studentFilterYear === 'সব' ? 'সকল বছর' : studentFilterYear})</h2>
                 </div>
-                <table className="w-full text-left">
+                <table className="w-full text-left print-table">
                    <thead className="bg-indigo-50 dark:bg-indigo-900/40 text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-300">
                       <tr>
                          <th className="p-4 rounded-tl-xl">রোল</th>
@@ -804,7 +778,7 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                          <th className="p-4">পিতার নাম</th>
                          <th className="p-4">মাতার নাম</th>
                          <th className="p-4">মোবাইল</th>
-                         <th className="p-4 rounded-tr-xl text-center">অ্যাকশন</th>
+                         <th className="p-4 rounded-tr-xl text-center no-print">অ্যাকশন</th>
                       </tr>
                    </thead>
                    <tbody className="">
@@ -813,13 +787,13 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                            <td className="p-4 font-black text-indigo-600 dark:text-indigo-400">{student.roll}</td>
                            <td className="p-4 font-bold cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => setPreviewStudent(student)}>
                               {student.name}
-                              <i className="fas fa-eye ml-2 text-gray-300 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all text-xs"></i>
+                              <i className="fas fa-eye ml-2 text-gray-300 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all text-xs no-print"></i>
                            </td>
                            <td className="p-4 font-medium">{student.studentClass} ({student.year})</td>
                            <td className="p-4 text-sm dark:text-gray-200">{student.fatherName}</td>
                            <td className="p-4 text-sm dark:text-gray-200">{student.motherName}</td>
                            <td className="p-4 text-sm font-mono dark:text-gray-200">{student.mobile}</td>
-                           <td className="p-4 text-center">
+                           <td className="p-4 text-center no-print">
                               <div className="flex justify-center gap-2">
                                  <button onClick={() => setEditingStudent(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"><i className="fas fa-edit"></i></button>
                                  <button onClick={() => handleDeleteStudent(student.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"><i className="fas fa-trash"></i></button>
@@ -1098,6 +1072,19 @@ const TeacherPanel: React.FC<TeacherPanelProps> = ({
                        )}
                     </tbody>
                  </table>
+
+                 {/* Print Footer */}
+                 <div className="hidden print:flex justify-between items-end mt-12 px-6">
+                    <div className="text-center">
+                        <div className="w-32 border-b border-gray-400 mb-1 mx-auto"></div>
+                        <p className="text-xs font-bold">অফিস সহকারী</p>
+                    </div>
+                    <div className="text-center">
+                        <div className="w-32 border-b border-gray-400 mb-1 mx-auto"></div>
+                        <p className="text-xs font-bold text-gray-400 italic mb-1">{new Date().toLocaleDateString('bn-BD')}</p>
+                        <p className="text-xs font-bold">প্রধান শিক্ষক</p>
+                    </div>
+                </div>
               </div>
            </div>
         </div>

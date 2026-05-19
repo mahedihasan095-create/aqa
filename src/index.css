@@ -1,6 +1,5 @@
-@import "tailwindcss";
-
 @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
 
 @theme {
   --color-indigo-50: #eef2ff;
@@ -74,6 +73,58 @@
   --color-blue-800: #1e40af;
   --color-blue-900: #1e3a8a;
   --color-blue-950: #172554;
+}
+
+@media print {
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: 'Hind Siliguri', sans-serif !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #312e81;
+    padding-bottom: 10px;
+  }
+  
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  
+  .print-table th, .print-table td {
+    border: 1px solid #e5e7eb !important;
+    padding: 8px !important;
+    font-size: 10pt !important;
+    color: black !important;
+  }
+  
+  .print-table th {
+    background-color: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .dark {
+    color-scheme: light !important;
+  }
+
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
 }
 
 :root {
